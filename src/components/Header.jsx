@@ -1,20 +1,22 @@
-const Header = () => {
+const Header = ({ baseUrl, setBaseUrl }) => {
+
   return (
     <div className="header">
-
       <div className="header-left">
         Vehicle Visual API
-      </div>
         <div className="url-box">
-          <span>URL</span>
+          URL
           <input
-            type="text"
-            placeholder="https://api.vehiclevisuals.com"/>
+            value={baseUrl}
+            onChange={(e) => setBaseUrl(e.target.value)}
+            placeholder="Enter API URL"
+          />
         </div>
-        <button className="btn">
-          Get API
-        </button>
       </div>
+      <div className="header-right">
+        <button className="btn">GET API</button>
+      </div>
+    </div>
   );
 };
 
