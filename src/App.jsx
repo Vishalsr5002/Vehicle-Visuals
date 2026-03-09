@@ -9,19 +9,34 @@ function App() {
 
   const [selectedOption, setSelectedOption] = useState("");
   const [animationUrl, setAnimationUrl] = useState("");
-  const [baseUrl, setBaseUrl] = useState("");
+  const [selectedApi, setSelectedApi] = useState(null);
 
   return (
     <div className="app-container">
-      <Header baseUrl={baseUrl} setBaseUrl={setBaseUrl} />
+
+      <Header />
+
       <div className="main-layout">
+
         <Sidebar
-          setSelectedOption={setSelectedOption}/>
-        <Dashboard animationUrl={animationUrl} />
+          setSelectedOption={setSelectedOption}
+          setAnimationUrl={setAnimationUrl}
+          setSelectedApi={setSelectedApi}
+        />
+
+        <Dashboard
+          selectedOption={selectedOption}
+          animationUrl={animationUrl}
+          setAnimationUrl={setAnimationUrl}
+          setSelectedApi={setSelectedApi}
+        />
+
         <ParametersPanel
           selectedOption={selectedOption}
-          baseUrl={baseUrl}
-          setAnimationUrl={setAnimationUrl}/>
+          selectedApi={selectedApi}
+          setAnimationUrl={setAnimationUrl}
+        />
+
       </div>
     </div>
   );
