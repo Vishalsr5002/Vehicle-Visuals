@@ -1,7 +1,11 @@
-import { useState } from "react";
-const AnimationViewer = ({ animationUrl }) => {
+import { useState, useEffect } from "react";
 
+const AnimationViewer = ({ animationUrl }) => {
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+  }, [animationUrl]);
 
   if (!animationUrl) {
     return (
@@ -12,13 +16,21 @@ const AnimationViewer = ({ animationUrl }) => {
   }
 
   return (
-    <div className="animation-box">
-
+    <div
+      className="animation-box"
+      style={{
+        position: "relative",
+        height: "500px",
+        width: "100%"
+      }}
+    >
       {loading && (
         <div
           style={{
             position: "absolute",
-            textAlign: "center",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%,-50%)",
             fontSize: "14px",
             color: "#475569"
           }}
@@ -28,18 +40,17 @@ const AnimationViewer = ({ animationUrl }) => {
       )}
 
       <iframe
+        key={animationUrl}
         src={animationUrl}
         title="Vehicle Animation"
         width="100%"
         height="100%"
-        style={{
-          border: "none",
-          borderRadius: "6px"
-        }}
+        style={{border: "none"}}
         allowFullScreen
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+
         onLoad={() => setLoading(false)}
       />
-
     </div>
   );
 };
