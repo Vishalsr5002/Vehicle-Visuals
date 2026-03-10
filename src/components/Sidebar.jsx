@@ -1,10 +1,15 @@
 import { useState } from "react";
-import { Film, Key, RefreshCw, Mail, ChevronDown, ChevronRight } from "lucide-react";
+import {
+  Film,
+  Key,
+  RefreshCw,
+  Mail,
+  ChevronDown,
+  ChevronRight
+} from "lucide-react";
 
-export const Sidebar = ({ setSelectedOption, setAnimationUrl, setSelectedApi }) => {
-
+export const Sidebar = ({ onSelectOption }) => {
   const [openMenu, setOpenMenu] = useState(null);
-
   const toggleMenu = (menu) => {
     setOpenMenu(openMenu === menu ? null : menu);
   };
@@ -17,12 +22,16 @@ export const Sidebar = ({ setSelectedOption, setAnimationUrl, setSelectedApi }) 
       <div className="menu-item" onClick={() => toggleMenu("api")}>
         <Key size={18} />
         <span>API key details</span>
-        {openMenu === "api" ? <ChevronDown size={16}/> : <ChevronRight size={16}/>}
+        {openMenu === "api" ? (
+          <ChevronDown size={16} />
+        ) : (
+          <ChevronRight size={16} />
+        )}
       </div>
 
       {openMenu === "api" && (
         <ul className="submenu">
-          <li onClick={() => setSelectedOption("catalog")}>
+          <li onClick={() => onSelectOption("catalog")}>
             API key details
           </li>
         </ul>
@@ -33,55 +42,54 @@ export const Sidebar = ({ setSelectedOption, setAnimationUrl, setSelectedApi }) 
       <div className="menu-item" onClick={() => toggleMenu("animations")}>
         <Film size={18} />
         <span>Animations</span>
-        {openMenu === "animations" ? <ChevronDown size={16}/> : <ChevronRight size={16}/>}
+        {openMenu === "animations" ? (
+          <ChevronDown size={16} />
+        ) : (
+          <ChevronRight size={16} />
+        )}
       </div>
 
       {openMenu === "animations" && (
         <ul className="submenu">
 
-          <li onClick={() => setSelectedOption("catalog")}>
+          <li onClick={() => onSelectOption("catalog")}>
             Animation Catalog
           </li>
 
           <li
             style={{ cursor: "pointer" }}
-            onClick={() => {
-              setSelectedOption("display");
-              setAnimationUrl("");
-              setSelectedApi(null);
-            }}
+            onClick={() => onSelectOption("display")}
           >
             Displaying Animations
           </li>
 
-          <li onClick={() => setSelectedOption("links")}>
+          <li onClick={() => onSelectOption("links")}>
             Generating Links for sending
           </li>
 
-          <li onClick={() => setSelectedOption("videoDetails")}>
+          <li onClick={() => onSelectOption("videoDetails")}>
             Get Video Details
           </li>
 
-          <li onClick={() => setSelectedOption("search")}>
+          <li onClick={() => onSelectOption("search")}>
             Search Animations
           </li>
 
-          <li onClick={() => setSelectedOption("share")}>
+          <li onClick={() => onSelectOption("share")}>
             Get Animation Share Link
           </li>
 
-          <li onClick={() => setSelectedOption("update")}>
+          <li onClick={() => onSelectOption("update")}>
             Update Animation Link
           </li>
 
-          <li onClick={() => setSelectedOption("usage")}>
+          <li onClick={() => onSelectOption("usage")}>
             Animation Link Usage
           </li>
 
-          <li onClick={() => setSelectedOption("viewed")}>
+          <li onClick={() => onSelectOption("viewed")}>
             Animations Viewed Report
           </li>
-
         </ul>
       )}
 
@@ -90,29 +98,40 @@ export const Sidebar = ({ setSelectedOption, setAnimationUrl, setSelectedApi }) 
       <div className="menu-item" onClick={() => toggleMenu("looped")}>
         <RefreshCw size={18} />
         <span>Looped Animations</span>
-        {openMenu === "looped" ? <ChevronDown size={16}/> : <ChevronRight size={16}/>}
+        {openMenu === "looped" ? (
+          <ChevronDown size={16} />
+        ) : (
+          <ChevronRight size={16} />
+        )}
       </div>
 
       {openMenu === "looped" && (
         <ul className="submenu">
-          <li onClick={() => setSelectedOption("generateLoop")}>
+          <li onClick={() => onSelectOption("generateLoop")}>
             Generate Looped Animations API Link
           </li>
-          <li onClick={() => setSelectedOption("autoLogin")}>
+
+          <li onClick={() => onSelectOption("autoLogin")}>
             Auto Login to Looped Animation Link
           </li>
         </ul>
       )}
+
       <h5>EMAIL AN ANIMATION</h5>
+
       <div className="menu-item" onClick={() => toggleMenu("email")}>
         <Mail size={18} />
         <span>Email An Animation</span>
-        {openMenu === "email" ? <ChevronDown size={16}/> : <ChevronRight size={16}/>}
+        {openMenu === "email" ? (
+          <ChevronDown size={16} />
+        ) : (
+          <ChevronRight size={16} />
+        )}
       </div>
 
       {openMenu === "email" && (
         <ul className="submenu">
-          <li onClick={() => setSelectedOption("emailAnimation")}>
+          <li onClick={() => onSelectOption("emailAnimation")}>
             Auto Login to Email Animation Link
           </li>
         </ul>
