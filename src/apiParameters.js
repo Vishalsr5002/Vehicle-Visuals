@@ -4,8 +4,8 @@ export const apiParameters = {
     { label: "Login ID", name: "login", required: true },
     { label: "Password", name: "password", required: true },
     { label: "API Key", name: "apiKey", required: true },
-    { label: "Module Name", name: "moduleName" },
-    { label: "Method Name", name: "methodName" },
+    { label: "Module Name", name: "moduleName", required: true },
+    { label: "Method Name", name: "methodName", required: true },
     { label: "Language", name: "lang" },
     { label: "Animation Type", name: "animationType" },
     { label: "Brand", name: "brand" }
