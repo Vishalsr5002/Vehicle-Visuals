@@ -41,12 +41,12 @@ export const apiParameters = {
   ],
 
   videoDetails: [
-    { label: "Login ID", name: "login", required: true },
-    { label: "Password", name: "password", required: true },
-    { label: "API Key", name: "apiKey", required: true },
-    { label: "Part ID", name: "partId", required: true },
-    { label: "Module Name", name: "moduleName", required: true },
-    { label: "Method Name", name: "methodName", required: true },
+    { label: "Login ID", name: "subscriber_login_id", required: true },
+    { label: "Password", name: "subscriber_password", required: true },
+    { label: "API Key", name: "api_key", required: true },
+    { label: "Part ID", name: "part_id", required: true },
+    { label: "Module Name", name: "module_name", required: true },
+    { label: "Method Name", name: "method_name", required: true },
     { label: "Language", name: "lang" },
     { label: "Brand", name: "brand", required: true },
     { label: "Diversed", name: "diversed" }
