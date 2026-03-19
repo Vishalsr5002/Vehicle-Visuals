@@ -5,18 +5,17 @@ const Dashboard = ({
   selectedOption,
   animationUrl,
   setAnimationUrl,
-  setSelectedApi
+  //setSelectedApi,
+  setFormData
 }) => {
   const playAnimation = (api) => {
-
   const query = new URLSearchParams(api.params).toString();
-
+  const baseUrl = "https://dev.motovisuals.com/thirdpartyapi/#!/thirdPartyLogin";
   const finalUrl = `${api.baseUrl}?${query}`;
-
-  console.log("Playing animation:", finalUrl);
-
+  console.log("Generated Animation URL:", finalUrl);
   setAnimationUrl(finalUrl);
-  setSelectedApi(api);
+  //setSelectedApi(api);
+  //setFormData(api.params || {});
 };
   const goBack = () => {
     setAnimationUrl("");
@@ -32,8 +31,7 @@ const Dashboard = ({
             <div
               key={api.id}
               className="animation-card"
-              onClick={() => playAnimation(api)}
-            >
+              onClick={() => playAnimation(api)}>
               <img
                 src={api.image}
                 alt={api.name}
@@ -42,8 +40,7 @@ const Dashboard = ({
                   height: "120px",
                   objectFit: "cover",
                   borderRadius: "6px"
-                }}
-              />
+                }}/>
               <h4>{api.name}</h4>
             </div>
           ))}
