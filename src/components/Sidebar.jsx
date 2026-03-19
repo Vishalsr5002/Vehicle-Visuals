@@ -13,12 +13,9 @@ export const Sidebar = ({ onSelectOption }) => {
   const toggleMenu = (menu) => {
     setOpenMenu(openMenu === menu ? null : menu);
   };
-
   return (
     <div className="sidebar">
-
       <h3>GET YOUR API KEY</h3>
-
       <div className="menu-item" onClick={() => toggleMenu("api")}>
         <Key size={18} />
         <span>API key details</span>
@@ -31,14 +28,13 @@ export const Sidebar = ({ onSelectOption }) => {
 
       {openMenu === "api" && (
         <ul className="submenu">
-          <li onClick={() => onSelectOption("catalog")}>
+          <li onClick={() => onSelectOption("api")}>
             API key details
           </li>
         </ul>
       )}
 
       <h5>ANIMATIONS</h5>
-
       <div className="menu-item" onClick={() => toggleMenu("animations")}>
         <Film size={18} />
         <span>Animations</span>
@@ -51,22 +47,21 @@ export const Sidebar = ({ onSelectOption }) => {
 
       {openMenu === "animations" && (
         <ul className="submenu">
-
+          
           <li onClick={() => onSelectOption("catalog")}>
             Animation Catalog
           </li>
-
+          
           <li
             style={{ cursor: "pointer" }}
-            onClick={() => onSelectOption("display")}
-          >
+            onClick={() => onSelectOption("display")}>
             Displaying Animations
           </li>
 
           <li onClick={() => onSelectOption("links")}>
             Generating Links for sending
           </li>
-
+          
           <li onClick={() => onSelectOption("videoDetails")}>
             Get Video Details
           </li>
@@ -94,7 +89,6 @@ export const Sidebar = ({ onSelectOption }) => {
       )}
 
       <h5>LOOPED ANIMATIONS</h5>
-
       <div className="menu-item" onClick={() => toggleMenu("looped")}>
         <RefreshCw size={18} />
         <span>Looped Animations</span>
@@ -136,7 +130,6 @@ export const Sidebar = ({ onSelectOption }) => {
           </li>
         </ul>
       )}
-
     </div>
   );
 };
