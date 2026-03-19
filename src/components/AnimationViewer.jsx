@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 
 const AnimationViewer = ({ animationUrl }) => {
   const [loading, setLoading] = useState(true);
-
   useEffect(() => {
     setLoading(true);
   }, [animationUrl]);
@@ -14,41 +13,44 @@ const AnimationViewer = ({ animationUrl }) => {
       </div>
     );
   }
-
-  return (
-    <div
-      className="animation-box"
-      style={{
-        position: "relative",
-        height: "500px",
-        width: "100%"
-      }}
-    >
-      {loading && (
-        <div
-          style={{
-            position: "absolute",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%,-50%)",
-            fontSize: "14px",
-            color: "#475569"
-          }}
-        >
-          Loading animation...
+  if (typeof animationUrl === "object") {
+    return (
+      <div style={{ display: "flex", gap: "20px" }}>
+        
+        <div style={{ flex: 1 }}>
+          <h4>Interactive</h4>
+          <iframe
+            //key={animationUrl.interactive} 
+            src={animationUrl.interactive}
+            width="100%"
+            height="400px"
+            style={{ border: "none" }}
+          />
         </div>
-      )}
+
+        <div style={{ flex: 1 }}>
+          <h4>Non-Interactive</h4>
+          <iframe
+            //key={animationUrl.normal}
+            src={animationUrl.normal}
+            width="100%"
+            height="400px"
+            style={{ border: "none" }}
+          />
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="animation-box" style={{ height: "500px" }}>
+      {loading && <p>Loading animation...</p>}
 
       <iframe
-        key={animationUrl}
+        //key={animationUrl}
         src={animationUrl}
-        title="Vehicle Animation"
         width="100%"
         height="100%"
-        style={{border: "none"}}
-        allowFullScreen
-        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-
+        style={{ border: "none" }}
         onLoad={() => setLoading(false)}
       />
     </div>
