@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { apiParameters } from "../config/apiParameters";
 
 export const ParametersPanel = ({
@@ -7,26 +7,26 @@ export const ParametersPanel = ({
   formData,
   setFormData
 }) => {
-  //const [formData, setFormData] = useState({});
+
   useEffect(() => {
-  if (!selectedOption) {
     setFormData({});
-  }
-}, [selectedOption]);
+  }, [selectedOption]);
+
   const handleChange = (e) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
     });
   };
+
   const handleRun = () => {
   if (!selectedOption) return;
-  const partId = formData.part_id;
-  if (!partId) {
-    alert("Part ID is required");
-    return;
-  }
   if (selectedOption === "videoDetails") {
+    const partId = formData.part_id;
+    if (!partId) {
+      alert("Part ID is required");
+      return;
+    }
     const base = `https://dev.motovisuals.com/thirdpartyapi/#!/viewAnimation/${partId}`;
     const commonParams = {
       show_menu: 0,
@@ -35,45 +35,38 @@ export const ParametersPanel = ({
       video_only: 0,
       auto_play: 0
     };
-
     const interactiveUrl =
       base +
       "?" +
       new URLSearchParams({
         ...commonParams,
         is_interactive: 1
-      }).toString();
-
+      });
     const normalUrl =
       base +
       "?" +
       new URLSearchParams({
         ...commonParams,
         is_interactive: 0
-      }).toString();
-    console.log("Interactive:", interactiveUrl);
-    console.log("Normal:", normalUrl);
+      });
     setAnimationUrl({
       interactive: interactiveUrl,
-      normal: normalUrl
+      normal: normalUrl,
+      showSelection: true
     });
     return;
   }
   const query = new URLSearchParams(formData).toString();
   const baseUrl = "https://dev.motovisuals.com/thirdpartyapi/#!/thirdPartyLogin";
-  const finalUrl = `${baseUrl}?${query}`;
-  setAnimationUrl(finalUrl);
+  setAnimationUrl(`${baseUrl}?${query}`);
 };
   const parameters = apiParameters[selectedOption] || [];
   return (
-    <div className="parameters">
+    <div className="search">
       <h3>API Parameters</h3>
-
-      {!selectedOption && (
-        <p>Select API to view parameters</p>
-      )}
+      {!selectedOption && <p>Select API to view parameters</p>}
       {selectedOption && parameters.length === 0 && (
-        <p>No parameters available for this API</p>
+        <p>No parameters available</p>
       )}
       {parameters.map((param) => (
         <div className="form-group" key={param.name}>
@@ -87,12 +80,10 @@ export const ParametersPanel = ({
             onChange={handleChange}
           />
         </div>
-      ))}
-      
+      )
+      )}
       {selectedOption && (
-        <button
-          className="submit-Btn"
-          onClick={handleRun}>
+        <button className="submit-Btn" onClick={handleRun}>
           Run API
         </button>
       )}
