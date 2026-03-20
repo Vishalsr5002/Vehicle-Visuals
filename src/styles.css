@@ -158,7 +158,6 @@ body{
   color:white;
 }
 
-
 .dashboard{
   background:#ffffff;
   padding:25px;
@@ -273,6 +272,34 @@ body{
   outline:none;
   border-color:#2e405c;
   box-shadow:0 0 4px rgba(46,64,92,0.3);
+}
+
+.card-container {
+  display: flex;
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.animation-card.enhanced {
+  flex: 1;
+  padding: 25px;
+  border-radius: 12px;
+  text-align: center;
+  cursor: pointer;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  transition: all 0.3s ease;
+}
+
+.animation-card.enhanced:hover {
+  transform: translateY(-6px) scale(1.03);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+  border-color: #2563eb;
+}
+
+.card-icon {
+  color: #2563eb;
+  margin-bottom: 10px;
 }
 
 .form-group select{
