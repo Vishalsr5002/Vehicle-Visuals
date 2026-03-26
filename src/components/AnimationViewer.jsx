@@ -2,9 +2,11 @@ import { useState, useEffect } from "react";
 
 const AnimationViewer = ({ animationUrl, onSelectPart }) => {
   const [loading, setLoading] = useState(true);
+
   useEffect(() => {
     setLoading(true);
   }, [animationUrl]);
+  
   if (!animationUrl) {
     return (
       <div className="animation-box">
@@ -12,58 +14,85 @@ const AnimationViewer = ({ animationUrl, onSelectPart }) => {
       </div>
     );
   }
+  
   if (animationUrl.type === "search") {
-    if (!animationUrl.data || animationUrl.data.length === 0) {
+    if (!Array.isArray(animationUrl.data) || animationUrl.data.length === 0) {
       return (
         <div className="animation-box">
           <p>No results found</p>
         </div>
       );
     }
+
     return (
       <div className="search-grid">
-        {animationUrl.data.map((item) => (
-          <div
-            key={item.part_id}
-            className="search-card"
-            onClick={() => {
-              if (onSelectPart) {
-                onSelectPart(item.part_id);
-              }
-            }}>
-            <img src={item.image} alt={item.title} />
-            <h4>{item.title}</h4>
-          </div>
-        ))}
+        {animationUrl.data.map((item) => {
+          const imageSrc =
+            item.image ||
+            item.thumbnail ||
+            item.image_url ||
+            "https://via.placeholder.com/200x120?text=No+Image";
+
+          return (
+            <div
+              key={item.part_id}
+              className="search-card"
+              onClick={() => onSelectPart?.(item.part_id)}
+            >
+              <img
+                src={imageSrc}
+                alt={item.title}
+                onError={(e) => {
+                  e.target.src = "https://via.placeholder.com/200x120?text=Image+Error";
+                }}
+              />
+              <h4>{item.title}</h4>
+            </div>
+          );
+        })}
       </div>
     );
   }
   if (animationUrl.type === "dual") {
     return (
-      <div className="dual-view">
-        <div className="viewer-box">
-          <h4>Interactive</h4>
-          <iframe
-            src={animationUrl.interactive}
-            width="100%"
-            height="400px"
-            style={{ border: "none" }}
-            onLoad={() => setLoading(false)}
-          />
-        </div>
+      <div className="dual-wrapper">
+        {loading && (
+          <p className="loading-text">Loading animations...</p>
+        )}
 
-        <div className="viewer-box">
-          <h4>Non-Interactive</h4>
-          <iframe
-            src={animationUrl.normal}
-            width="100%"
-            height="400px"
-            style={{ border: "none" }}
-          />
+        <div className="dual-view">
+          {/* Interactive */}
+          <div className="viewer-box">
+            <h4>Interactive</h4>
+            <iframe
+              key={animationUrl.interactive}
+              src={animationUrl.interactive}
+              width="100%"
+              height="400px"
+              style={{ border: "none" }}
+              allow="autoplay; fullscreen"
+              onLoad={() => setLoading(false)}
+            />
+          </div>
+
+          {/* Non Interactive */}
+          <div className="viewer-box">
+            <h4>Non-Interactive</h4>
+            <iframe
+              key={animationUrl.normal}
+              src={animationUrl.normal}
+              width="100%"
+              height="400px"
+              style={{ border: "none" }}
+              allow="autoplay; fullscreen"
+            />
+          </div>
         </div>
       </div>
     );
   }
+
+  
   if (animationUrl.type === "single") {
     if (!animationUrl.url) {
       return (
@@ -82,11 +111,13 @@ const AnimationViewer = ({ animationUrl, onSelectPart }) => {
           width="100%"
           height="500px"
           style={{ border: "none" }}
+          allow="autoplay; fullscreen"
           onLoad={() => setLoading(false)}
         />
       </div>
     );
   }
+  
   return (
     <div className="animation-box">
       <p>Unsupported view</p>
