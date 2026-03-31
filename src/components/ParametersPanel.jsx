@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { apiParameters } from "../config/apiParameters";
 import { searchAnimations, getAnimationUrls } from "../services/api";
-
+import { getStreamingVideo } from "../services/api";
 export const ParametersPanel = ({
   selectedOption,
   setAnimationUrl,
@@ -9,7 +9,6 @@ export const ParametersPanel = ({
   setFormData
 }) => {
   const [debouncedTerm, setDebouncedTerm] = useState("");
-  
   useEffect(() => {
     setFormData({});
   }, [selectedOption]);
@@ -20,10 +19,8 @@ export const ParametersPanel = ({
       [e.target.name]: e.target.value
     });
   };
-  
   useEffect(() => {
     if (selectedOption !== "search") return;
-
     const timer = setTimeout(() => {
       setDebouncedTerm(formData.term || "");
     }, 500);
@@ -48,24 +45,28 @@ export const ParametersPanel = ({
     }
   };
 
-  const handleRun = () => {
-    if (!selectedOption) return;
-    if (selectedOption === "videoDetails") {
-      const partId = formData.part_id;
-      if (!partId) {
-        alert("Part ID is required");
-        return;
-      }
-      const data = getAnimationUrls(partId);
-      setAnimationUrl(data);
+const handleRun = async() => {
+  if (!selectedOption) return;
+  if (selectedOption === "videoDetails") {
+    const partId = formData.part_id;
+    if (!partId) {
+      alert("Part ID is required");
+      return;
     }
-  };
-
+    const stream = getStreamingVideo (partId);
+    if (stream?.videourl){
+      setAnimationUrl({
+        type: "single",
+        url: stream.video_url
+      });
+    } else {
+      console.error("Streaming failed");
+    }}
+};
   const parameters = apiParameters[selectedOption] || [];
   return (
     <div className="search">
       <h3>API Parameters</h3>
-
       {!selectedOption && <p>Select API to view parameters</p>}
       {parameters.map((param) => (
         <div className="form-group" key={param.name}>
