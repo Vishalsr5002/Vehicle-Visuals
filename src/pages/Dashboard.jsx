@@ -1,73 +1,92 @@
 import { useEffect, useState } from "react";
-import { APIs } from "../data/apis";
-import AnimationViewer from "../components/AnimationViewer";
-import { getAnimationDetails, getAnimationUrls } from "../services/api";
-import AnimationTree from "../components/AnimationTree";
-import { getAnimationUrls } from "../services/api";
-//import { PlayIcon } from "lucide-react";
+import { getAnimationDetails } from "../services/api";
+import { Folder, Layers, ArrowLeft } from "lucide-react";
 
-const [treeData, setTreeData] = useState(null);
-useEffect(() => {
-  const loadTreeData = async () => {
-    const data = await getAnimationDetails();
+const Dashboard = ({ setAnimationUrl, selectedOption, handleSelectPart }) => {
+  const [treeData, setTreeData] = useState(null);
+  const [currentLevel, setCurrentLevel] = useState([]);
+  const [breadcrumb, setBreadcrumb] = useState([]);
+  useEffect(() => {
+    const loadData = async () => {
+  const data = await getAnimationDetails();
+  if (data) {
     setTreeData(data);
+    setCurrentLevel(
+      Array.isArray(data) ? data : Object.values(data))
+  }};
+    loadData();
+  }, []);
+  const handleClick = (item) => {
+  console.log("Clicked item:", item);
+  //const hasChildren = item.children && Object.keys(item.children).length > 0;
+  if (item.children && Object.keys(item.children).length > 0) {
+    setBreadcrumb([...breadcrumb, item]);
+    setCurrentLevel(Object.values(item.children));
+    return;
   }
-  loadTreeData();
-}, []);
-const Dashboard = ({ selectedOption }) => {
-  const [animationData, setAnimationData] = useState(null);
-  const playAnimation = async (api) => {
-    const data = await getAnimationUrls(api.part_id);
-    setAnimationData(data);
-  };
+  if (item.part_id) {
+    handleSelectPart(item.part_id);
+    return;
+  }
+  if(typeof item === "object"){
+    setCurrentLevel(object.values(item));
+    return;
+  }
+  //console.warn("Invalid item clicked");
+};
   const goBack = () => {
-    setAnimationData(null);
+    setBreadcrumb([]);
+    setCurrentLevel(
+      Array.isArray(treeData) ? treeData : Object.values(treeData))
   };
   return (
     <div className="dashboard">
-      <h2>Vehicle Animation Viewer</h2>
-      <div className="tree-section">
-        <h3>Animation Catalog</h3>
-        <AnimationTree
-        data={treeData}
-        onSelectPart={(partId) => {
-          setAnimationUrl(getAnimationUrls(partId));
-        }}/>
-        </div>
-      {selectedOption === "display" && !animationData && (
-        <div className="animation-grid">
-          {APIs.map((api) => (
-            <div
-              key={api.id}
-              className="animation-card"
-              onClick={() => playAnimation(api)}>
-              <img
-                src={api.image}
-                alt={api.name}
-                style={{
-                  width: "100%",
-                  height: "120px",
-                  objectFit: "cover",
-                  borderRadius: "6px"
-                }}/>
-              <h4>{api.name}</h4>
-            </div>
-          ))}
-        </div>
-      )}
+      <h2>Animation Catalog</h2>
 
-      {animationData && (
-        <div>
-          <button
-            className="btn"
-            style={{ marginBottom: "15px" }}
-            onClick={goBack}>
-            Back to Animations
+      {/* BREADCRUMB */}
+      {breadcrumb.length > 0 && (
+        <div className="breadcrumb">
+          <button className="back-btn" onClick={goBack}>
+            <ArrowLeft size={24} /> Back
           </button>
 
-          <AnimationViewer animationUrl={animationData} />
+          <span className="crumb">
+            {breadcrumb.map((b) => b.en_US).join(" / ")}
+          </span>
         </div>
       )}
+
+      {/* CARDS */}
+      <div className="animation-grid">
+        {currentLevel
+          .filter((item) => item && Object.keys(item).length > 0)
+          .map((item, index) => {
+            const hasChildren =
+              item.children && Object.keys(item.children).length > 0;
+            return (
+              <div
+                key={item.part_id || item.tag_name || index}
+                className="animation-card"
+                onClick={() => handleClick(item)}>
+                {/* ICON */}
+                <div className="card-icon">
+                  {hasChildren ? (
+                    <Folder size={38} />
+                  ) : (
+                    <Layers size={38} />
+                  )}
+                </div>
+                {/* TITLE */}
+                <h4>{item.en_US || "Clutch System"}</h4>
+
+                {/* TYPE LABEL */}
+                <span className="badge">
+                  {hasChildren ? "System" : "Part"}
+                </span>
+              </div>
+            );
+          })}
+      </div>
     </div>
   );
 };
