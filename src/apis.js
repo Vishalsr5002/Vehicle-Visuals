@@ -5,6 +5,7 @@ const normalizeSearchData = (data) => {
   if (!data || typeof data !== "object") return [];
   return Object.values(data);
 };
+//export const getStreamingVideo = getAnimationShareLink;
 export const searchAnimations = async (term, options = {}) => {
   if (!term) return [];
   try {
@@ -26,21 +27,20 @@ export const searchAnimations = async (term, options = {}) => {
     } catch (err) {
       console.error("Invalid JSON from API");
       return [];
-    }
-    return normalizeSearchData(fetching);
+    }return normalizeSearchData(fetching);
   } catch (err) {
     console.warn("API failed, using mock data");
     return [
       {
         part_id: "7011",
         title: "Clutch System 1",
-        is_interactive: 0,
+        is_interactive: 1,
         image: "/clutchh.webp"
       },
       {
         part_id: "7011",
         title: "Clutch System",
-        is_interactive: 1,
+        is_interactive: 0,
         image: "/clutchh.webp"
       },
       {
@@ -51,8 +51,7 @@ export const searchAnimations = async (term, options = {}) => {
     ].filter((item) =>
       item.title.toLowerCase().includes(term.toLowerCase())
     );
-  }
-};
+  }};
 export const getAnimationDetails = async () => {
   try {
     const query = new URLSearchParams({
@@ -67,8 +66,7 @@ export const getAnimationDetails = async () => {
   } catch (err) {
     console.error("Failed to fetch animation tree", err);
     return null;
-  }
-};
+  }};
 export const getAnimationUrls = (partId) => {
   if (!partId) {
     console.error("Invalid partId for animation");
@@ -81,20 +79,12 @@ export const getAnimationUrls = (partId) => {
     show_menu: 0,
     show_left_sidebar: 0,
     video_only: 0,
-    auto_play: 1
-  };
-  const interactiveUrl =
-    base +
-    "?" +
-    new URLSearchParams({
+    auto_play: 1};
+  const interactiveUrl = base + "?" + new URLSearchParams({
       ...params,
       is_interactive: 1
     });
-
-  const normalUrl =
-    base +
-    "?" +
-    new URLSearchParams({
+  const normalUrl = base + "?" + new URLSearchParams({
       ...params,
       is_interactive: 0
     });         
@@ -106,22 +96,20 @@ export const getAnimationUrls = (partId) => {
     normal: normalUrl
   };
 };
-
 export const generateViewerLinks = (partId) => {
   if (!partId) return null;
   //const inter = "https://dev.motovisuals.com/thirdpartyapi/#!/viewAnimation";
-  ///const noninter = "https://motovisuals.com/thirdpartyapi/#!/viewAnimation";
+  ///const non-inter = "https://motovisuals.com/thirdpartyapi/#!/viewAnimation";
   return {
     type: "dual",
     interactive: `https://dev.motovisuals.com/thirdpartyapi/#!/viewAnimation${inter}/${partId}?show_menu=0&is_interactive=1&show_left_sidebar=0&show_description=0&video_only=0&auto_play=0`,
-    normal: `https://motovisuals.com/thirdpartyapi/#!/viewAnimation${noninter}/${partId}?show_menu=0&is_interactive=0&show_left_sidebar=0&show_description=0&video_only=0&auto_play=0`
+    normal: `https://motovisuals.com/thirdpartyapi/#!/viewAnimation${non-inter}/${partId}?show_menu=0&is_interactive=0&show_left_sidebar=0&show_description=0&video_only=0&auto_play=0`
   };
-};
-export const getStreamingVideo = async (partId) => {
+}; 
+export const getAnimationShareLink = async (partId) => {
   if (!partId) {
     console.error("partId required for streaming");
-    return null;
-  }
+    return null;}
   try {
     const query = new URLSearchParams({
       api_key: API_KEY,
@@ -131,29 +119,63 @@ export const getStreamingVideo = async (partId) => {
       brand: "generic",
       lang: "en_US"
     }).toString();
-
     const url = `${BASE_API_URL}?${query}`;
-    console.log("Streaming API:", url);
+    console.log("Share Link API:", url);
     const res = await fetch(url);
     const data = await res.json();
-    console.log(" Streaming Response:", data);
+    //console.log("Share Link Response:", data);
     if (Array.isArray(data)) {
       return data[0];
     }
-
     return data;
   } catch (err) {
-    console.error("Streaming error:", err);
+    console.error("Share Link error:", err);
     return null;
   }
 };
-
+export const updateAnimationLink = async ({
+  unique_id,
+  job_id,
+  ref_id,
+  cost,
+  track_type = "email"
+}) => {
+  if (!unique_id || unique_id.length === 0) {
+    console.error("unique_id is required");
+    return null;
+  }
+  try {
+    const payload = {
+      api_key: API_KEY,
+      moduleName: "emailananimation",
+      methodName: "updateAnimationLink",
+      unique_id: Array.isArray(unique_id) ? unique_id : [unique_id],
+      job_id,
+      ref_id,
+      cost,
+      track_type
+    };
+    console.log("Update API Payload:", payload);
+    const res = await fetch(BASE_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    console.log("Update Response:", data);
+    return data;
+  } catch (err) {
+    console.error("Update API error:", err);
+    return null;
+  }
+};
 export const generateShareLink = async (partId, options = {}) => {
   if (!partId) {
     console.error("partId is required");
     return null;
   }
-
   try {
     const query = new URLSearchParams({
       api_key: options.apiKey || API_KEY,
@@ -167,17 +189,14 @@ export const generateShareLink = async (partId, options = {}) => {
     console.log("Share Link API:", url);
     const res = await fetch(url);
     const data = await res.json();
-
     return data?.url || null;
   } catch (err) {
     console.error("Failed to generate share link", err);
     return null;
   }
 };
-
 export const getVideoDetails = async (partId, options = {}) => {
   if (!partId) return null;
-
   try {
     const query = new URLSearchParams({
       api_key: options.apiKey || API_KEY,
@@ -190,7 +209,6 @@ export const getVideoDetails = async (partId, options = {}) => {
 
     const url = `${BASE_API_URL}?${query}`;
     console.log("Video Details API:", url);
-
     const res = await fetch(url);
     const data = await res.json();
     
@@ -205,9 +223,7 @@ export const getVideoDetails = async (partId, options = {}) => {
         }
       });
     }
-
     console.log("Video Details Response:", data);
-
     return data;
   } catch (err) {
     console.error("Failed to fetch video details", err);
