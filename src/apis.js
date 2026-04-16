@@ -28,10 +28,8 @@ export const searchAnimations = async (term, options = {}) => {
 
     const url = `${BASE_API_URL}?${query}`;
     console.log("Search API:", url);
-
     const res = await fetch(url);
     const text = await res.text();
-
     let data = {};
     try {
       data = JSON.parse(text);
@@ -67,7 +65,6 @@ export const getUsageReport = async (params = {}) => {
       ...(params.date_to && { date_to: params.date_to }),
       ...(params.unique_id && { unique_id: params.unique_id })
     }).toString();
-
     const url = `${BASE_API_URL}?${query}`;
     console.log("Usage Report API:", url);
     const res = await fetch(url);
@@ -128,6 +125,8 @@ export const getAnimationUrls = (partId) => {
   return null;
   const base = "https://dev.motovisuals.com/api/animation_link/view/interactive_animation.php";
   const params = {
+    login: "motovisuals",
+    password: "motovisuals",
     api_key: API_KEY,
     part_id: partId,
     show_menu: 0,
@@ -181,8 +180,13 @@ export const getAnimationShareLink = async (partId) => {
     const data = await res.json();
     console.log("Share API Response:", data);
     if (Array.isArray(data)) return data[0];
-    if (data?.data) return data.data;
-    return data;
+    if (data?.data && typeof data.data === "object") return data.data;
+    if (data?.video_url) return data;
+    if (!data?.video_url) {
+    console.error("Invalid Share API response:", data);
+    return null;
+  }
+    return null;
   } catch (err) {
     console.error("Share Link error:", err);
     return null;
@@ -253,10 +257,65 @@ export const getVideoDetails = async (partId, options = {}) => {
         }
       });
     }
-
     return data;
   } catch (err) {
     console.error("Video details error:", err);
     return null;
+  }
+};
+export const getLoopedAnimationLink = async ({
+  username,
+  password,
+  mute = 0
+}) => {
+  if (!username || !password) return null;
+  try {
+    const url = `http://interim.vehiclevisuals.com/api/loopedanimations/generate_loopedanimation_link.php?username=${username}&password=${password}&mute=${mute}`;
+    console.log("Looped API:", url);
+    const res = await fetch(url);
+    const data = await res.json();
+    console.log("Looped API Response:", data);
+    // handle different formats safely
+    if (typeof data === "string") return data;
+    if (data?.url) return data.url;
+    if (data?.link) return data.link;
+    return null;
+  } catch (err) {
+    console.error("Looped API error:", err);
+    return null;
+  }
+};
+export const generateLoopedAnimationLink = async ({
+  username,
+  password,
+  mute = 1
+}) => {
+  try {
+    const url = `http://interim.vehiclevisuals.com/api/loopedanimations/generate_loopedanimation_link.php?username=${username}&password=${password}&mute=${mute}`;
+    console.log("Loop API URL:", url);
+    const res = await fetch(url);
+    const text = await res.text();
+    console.log("Loop API RAW RESPONSE:", text);
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      return {
+        status: true,
+        url: text.trim()
+      };
+    }
+    if (data?.url) {
+      return {
+        status: true,
+        url: data.url
+      };
+    }
+
+    return { status: false };
+
+  } catch (err) {
+    console.error("Loop API error:", err);
+    return { status: false };
   }
 };
