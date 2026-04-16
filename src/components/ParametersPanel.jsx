@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
 import { apiParameters } from "../config/apiParameters";
-import { searchAnimations } from "../services/api";
-import { getAnimationShareLink } from "../services/api";
-import { updateAnimationLink } from "../services/api";
-import { getAnimationLinkUsage } from "../services/api";
-import { getUsageReport } from "../services/api";
+import {
+  searchAnimations,
+  getAnimationShareLink,
+  updateAnimationLink,
+  getAnimationLinkUsage,
+  getUsageReport,
+  generateLoopedAnimationLink  
+} from "../services/api";
 
 export const ParametersPanel = ({
   selectedOption,
@@ -16,26 +19,24 @@ export const ParametersPanel = ({
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState(null);
 
-  // Reset on API change
   useEffect(() => {
     setFormData({});
     setStatus(null);
     setAnimationUrl(null);
   }, [selectedOption]);
 
-  // Handle input
   const handleChange = (e) => {
     setFormData((prev) => ({
       ...prev,
       [e.target.name]: e.target.value
     }));
   };
-  // Debounce search 
   useEffect(() => {
     if (selectedOption !== "search") return;
     const timer = setTimeout(() => {
       setDebouncedTerm(formData.term || "");
     }, 300);
+
     return () => clearTimeout(timer);
   }, [formData.term, selectedOption]);
 
@@ -44,6 +45,7 @@ export const ParametersPanel = ({
       handleSearch();
     }
   }, [debouncedTerm]);
+
   const handleSearch = async () => {
     try {
       setLoading(true);
@@ -59,40 +61,63 @@ export const ParametersPanel = ({
       setLoading(false);
     }
   };
+
   const handleRun = async () => {
     if (!selectedOption) return;
+
     setLoading(true);
     setStatus(null);
+
     try {
-      const partId = (formData.partId || formData.part_id || "").trim();
-      // VIDEO DETAILS
+      const partId = (formData.partId || "").trim();
       if (selectedOption === "videoDetails") {
-        if (!partId) {
-          alert("Part ID is required");
+        if (!partId) return alert("Part ID is required");
+        setAnimationUrl({
+          type: "dual",
+          interactive: `https://dev.motovisuals.com/thirdpartyapi/#!/viewAnimation/${partId}?is_interactive=1`,
+          normal: `https://motovisuals.com/thirdpartyapi/#!/viewAnimation/${partId}?is_interactive=0`
+        });
+      }
+      
+      else if (selectedOption === "share") {
+        if (!partId) return alert("Part ID required");
+        const res = await getAnimationShareLink(partId);
+        if (!res || !res.unique_id) {
+          setStatus({ type: "error", msg: "Failed to generate link" });
           return;
         }
         setAnimationUrl({
-          type: "dual",
-          interactive: `https://dev.motovisuals.com/thirdpartyapi/#!/viewAnimation/${partId}?show_menu=0&is_interactive=1&show_left_sidebar=0&show_description=0&video_only=0&auto_play=0`,
-          normal: `https://motovisuals.com/thirdpartyapi/#!/viewAnimation/${partId}?show_menu=0&is_interactive=0&show_left_sidebar=0&show_description=0&video_only=0&auto_play=0`
+          type: "share",
+          data: { ...res, partId }
         });
       }
-      else if (selectedOption === "share") {
-        if (!partId) {
-          alert("Part ID required");
+      else if (selectedOption === "generateLoop") {
+        const { login, password, mute } = formData;
+        if (!login || !password) {
+          alert("Username & Password required");
           return;
         }
-        const res = await getAnimationShareLink(partId);
-        if (res && res.unique_id) {
-          setAnimationUrl({
-            type: "share",
-            data: res
+        const res = await generateLoopedAnimationLink({
+          username: login,
+          password: password,
+          mute: mute || 1
+        });
+
+        console.log("LOOP RESPONSE →", res);
+
+        if (!res || !res.status || !res.url) {
+          setStatus({
+            type: "error",
+            msg: "Failed to generate loop link"
           });
-        } else {
-          setStatus({ type: "error", msg: "Failed to generate link" });
+          return;
         }
+
+        setAnimationUrl({
+          type: "looped", 
+          url: res.url
+        });
       }
-      // UPDATE
       else if (selectedOption === "update") {
         const res = await updateAnimationLink({
           unique_id: formData.uniqueId,
@@ -101,55 +126,46 @@ export const ParametersPanel = ({
           cost: formData.cost,
           track_type: formData.trackType || "email"
         });
+
         setStatus({
           type: res?.status ? "success" : "error",
           msg: res?.message || "Update failed"
         });
       }
-      // USAGE
       else if (selectedOption === "usage") {
-        const jobId = formData.jobId || formData.job_id;
-        if (!jobId) {
-          alert("Job ID required");
-          return;
-        }
-        const res = await getAnimationLinkUsage(jobId);
-        if (res?.status) {
-          setAnimationUrl({
-            type: "usage",
-            data: res.data
-          });
-        } else {
-          setAnimationUrl({ type: "usage", data: {} });
-          setStatus({ type: "error", msg: "No usage found" });
-        }
+        if (!formData.jobId) return alert("Job ID required");
+        const res = await getAnimationLinkUsage(formData.jobId);
+        setAnimationUrl({
+          type: "usage",
+          data: res?.data || {}
+        });
       }
-
-      // VIEWED REPORT
       else if (selectedOption === "viewed") {
         const res = await getUsageReport({
           date_from: formData.dateFrom,
           date_to: formData.dateTo,
           unique_id: formData.uniqueId
         });
-        if (res?.status) {
-          setAnimationUrl({
-            type: "viewed",
-            data: res.data
-          });
-        } else {
-          setAnimationUrl({ type: "viewed", data: [] });
-          setStatus({ type: "error", msg: "No report found" });
-        }
+
+        setAnimationUrl({
+          type: "viewed",
+          data: res?.data || []
+        });
       }
+
     } catch (err) {
       console.error(err);
-      setStatus({ type: "error", msg: "Something went wrong" });
+      setStatus({
+        type: "error",
+        msg: "Something went wrong"
+      });
     } finally {
       setLoading(false);
     }
   };
+
   const parameters = apiParameters[selectedOption] || [];
+
   return (
     <div className="search">
       <h3>API Parameters</h3>
@@ -167,15 +183,17 @@ export const ParametersPanel = ({
           />
         </div>
       ))}
+
       {selectedOption && (
         <button
           className="submit-Btn"
           onClick={handleRun}
           disabled={loading}
         >
-          {loading ? "Processing" : "Run API"}
+          {loading ? "Processing..." : "Run API"}
         </button>
       )}
+
       {status && (
         <div className={`update-status ${status.type}`}>
           {status.msg}
