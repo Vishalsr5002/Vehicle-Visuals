@@ -1,13 +1,11 @@
 import { useEffect, useState } from "react";
 import { apiParameters } from "../config/apiParameters";
-import {
-  searchAnimations,
-  getAnimationShareLink,
-  updateAnimationLink,
-  getAnimationLinkUsage,
-  getUsageReport,
-  generateLoopedAnimationLink  
-} from "../services/api";
+import { searchAnimations } from "../services/api";
+import { getAnimationShareLink } from "../services/api";
+import { updateAnimationLink } from "../services/api";
+import { getAnimationLinkUsage } from "../services/api";
+import { getUsageReport } from "../services/api";
+import {generateLoopedAnimationLink } from "../services/api";
 
 export const ParametersPanel = ({
   selectedOption,
@@ -36,7 +34,6 @@ export const ParametersPanel = ({
     const timer = setTimeout(() => {
       setDebouncedTerm(formData.term || "");
     }, 300);
-
     return () => clearTimeout(timer);
   }, [formData.term, selectedOption]);
 
@@ -45,7 +42,6 @@ export const ParametersPanel = ({
       handleSearch();
     }
   }, [debouncedTerm]);
-
   const handleSearch = async () => {
     try {
       setLoading(true);
@@ -61,13 +57,10 @@ export const ParametersPanel = ({
       setLoading(false);
     }
   };
-
   const handleRun = async () => {
     if (!selectedOption) return;
-
     setLoading(true);
     setStatus(null);
-
     try {
       const partId = (formData.partId || "").trim();
       if (selectedOption === "videoDetails") {
@@ -94,27 +87,25 @@ export const ParametersPanel = ({
       else if (selectedOption === "generateLoop") {
         const { login, password, mute } = formData;
         if (!login || !password) {
-          alert("Username & Password required");
+          alert("Login & Password required");
           return;
         }
         const res = await generateLoopedAnimationLink({
           username: login,
           password: password,
           mute: mute || 1
-        });
-
-        console.log("LOOP RESPONSE →", res);
-
+        }
+      );
+        console.log("LOOP RESPONSE", res);
         if (!res || !res.status || !res.url) {
           setStatus({
             type: "error",
-            msg: "Failed to generate loop link"
+            msg: "Failed to generate the loop link"
           });
           return;
         }
-
         setAnimationUrl({
-          type: "looped", 
+          type: "generateLoop", 
           url: res.url
         });
       }
@@ -124,14 +115,15 @@ export const ParametersPanel = ({
           job_id: formData.jobId,
           ref_id: formData.referenceId,
           cost: formData.cost,
-          track_type: formData.trackType || "email"
+          track_type: formData.trackType || "email",
+          lang : "en_USA"
         });
-
         setStatus({
           type: res?.status ? "success" : "error",
           msg: res?.message || "Update failed"
         });
       }
+
       else if (selectedOption === "usage") {
         if (!formData.jobId) return alert("Job ID required");
         const res = await getAnimationLinkUsage(formData.jobId);
@@ -163,7 +155,6 @@ export const ParametersPanel = ({
       setLoading(false);
     }
   };
-
   const parameters = apiParameters[selectedOption] || [];
 
   return (
