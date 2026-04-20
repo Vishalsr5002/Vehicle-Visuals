@@ -33,7 +33,6 @@ export const Sidebar = ({ onSelectOption }) => {
           </li>
         </ul>
       )}
-
       <h5>ANIMATIONS</h5>
       <div className="menu-item" onClick={() => toggleMenu("animations")}>
         <Film size={18} />
@@ -44,7 +43,6 @@ export const Sidebar = ({ onSelectOption }) => {
           <ChevronRight size={16} />
         )}
       </div>
-
       {openMenu === "animations" && (
         <ul className="submenu">
           
@@ -87,7 +85,6 @@ export const Sidebar = ({ onSelectOption }) => {
           </li>
         </ul>
       )}
-
       <h5>LOOPED ANIMATIONS</h5>
       <div className="menu-item" onClick={() => toggleMenu("looped")}>
         <RefreshCw size={18} />
@@ -110,9 +107,7 @@ export const Sidebar = ({ onSelectOption }) => {
           </li>
         </ul>
       )}
-
       <h5>EMAIL AN ANIMATION</h5>
-
       <div className="menu-item" onClick={() => toggleMenu("email")}>
         <Mail size={18} />
         <span>Email An Animation</span>
@@ -127,6 +122,54 @@ export const Sidebar = ({ onSelectOption }) => {
         <ul className="submenu">
           <li onClick={() => onSelectOption("emailAnimation")}>
             Auto Login to Email Animation Link
+          </li>
+        </ul>
+      )}
+      <h5>MISC APIs</h5>
+      <div className="menu-item" onClick={() => toggleMenu("additionalAPI")}>
+        <square-plus size={18} />
+        <span>Additional APIs</span>
+        {openMenu === "additionalAPI" ? (
+          <ChevronDown size={16} />
+        ) : (
+          <ChevronRight size={16} />
+        )}
+      </div>
+      {openMenu === "additionalAPI" && (
+        <ul className="submenu">
+          
+          <li onClick={() => onSelectOption("auto")}>
+            Auto-Login
+          </li>
+          
+          <li
+            style={{ cursor: "pointer" }}
+            onClick={() => onSelectOption("lookup")}>
+            Website Lookup by API Key
+          </li>
+
+          <li onClick={() => onSelectOption("prompt")}>
+            User Upgrade Prompt
+          </li>
+          
+          <li onClick={() => onSelectOption("lite")}>
+            Upgrade Lite User
+          </li>
+
+          <li onClick={() => onSelectOption("pdf")}>
+            Animation PDF
+          </li>
+
+          <li onClick={() => onSelectOption("get")}>
+            Get API Key
+          </li>
+
+          <li onClick={() => onSelectOption("preference")}>
+            Get User Preference
+          </li>
+
+          <li onClick={() => onSelectOption("details")}>
+            Get User Details
           </li>
         </ul>
       )}
