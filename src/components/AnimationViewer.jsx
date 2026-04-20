@@ -11,20 +11,14 @@ const AnimationViewer = ({ animationUrl }) => {
     const timer = setTimeout(() => setLoading(false), 300);
     return () => clearTimeout(timer);
   }, [animationUrl]);
+
   useEffect(() => {
     if (animationUrl?.type !== "generateLoop") return;
-
-    console.log("Loop started");
-
     const interval = setInterval(() => {
-      setLoopCount((prev) => {
-        console.log("Loop played:", prev + 1);
-        return prev + 1;
-      });
-    }, 10000); 
+      setLoopCount((prev) => prev + 1);
+    }, 10000);
     return () => clearInterval(interval);
   }, [animationUrl]);
-
   if (!animationUrl) {
     return (
       <div className="animation-box">
@@ -40,11 +34,9 @@ const AnimationViewer = ({ animationUrl }) => {
       </div>
     );
   }
-
   if (animationUrl.type === "search") {
     const interactiveLink = "https://dev.motovisuals.com/thirdpartyapi/#!/viewAnimation/7011?show_menu=0&is_interactive=1&show_left_sidebar=0&show_description=0&video_only=0&auto_play=0";
-    const narratedLink = "https://motovisuals.com/thirdpartyapi/#!/viewAnimation/7011?show_menu=0&is_interactive=0&show_left_sidebar=0&show_description=0&video_only=0&auto_play=0";
-
+    const narratedLink ="https://motovisuals.com/thirdpartyapi/#!/viewAnimation/7011?show_menu=0&is_interactive=0&show_left_sidebar=0&show_description=0&video_only=0&auto_play=0";
     return (
       <div className="panel">
         <h3>Animation Preview</h3>
@@ -61,40 +53,33 @@ const AnimationViewer = ({ animationUrl }) => {
       </div>
     );
   }
-
   if (animationUrl.type === "share") {
     const data = animationUrl.data;
-
     if (!data?.video_url) {
       return <p>Invalid Share Data</p>;
     }
 
     const narratedLink = data.video_url;
-
-    const interactiveLink =
-      data.video_url.includes("is_interactive")
-        ? data.video_url.replace("is_interactive=0", "is_interactive=1")
-        : data.video_url + "&is_interactive=1";
+    const interactiveLink = data.video_url.includes("is_interactive")
+      ? data.video_url.replace("is_interactive=0", "is_interactive=1")
+      : data.video_url + "&is_interactive=1";
 
     return (
       <div className="panel">
         <h3>{data.video_title}</h3>
-
         <div className="card">
-          <p><strong>Unique ID:</strong> {data.unique_id || "N/A"}</p>
-
+          <p>
+            <strong>Unique ID:</strong> {data.unique_id || "N/A"}
+          </p>
           <p><strong>Interactive Link:</strong></p>
           <input value={interactiveLink} readOnly />
-
           <p><strong>Narrated Link:</strong></p>
           <input value={narratedLink} readOnly />
         </div>
-
         <div className="viewer-box">
           <h4>Interactive</h4>
           <iframe src={interactiveLink} width="100%" height="300" />
         </div>
-
         <div className="viewer-box">
           <h4>Narrated</h4>
           <iframe src={narratedLink} width="100%" height="300" />
@@ -102,26 +87,43 @@ const AnimationViewer = ({ animationUrl }) => {
       </div>
     );
   }
+  if (animationUrl.type === "looped") {
+  return (
+    <div
+      className="panel"
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        minHeight: "70vh"
+      }}
+    >
+      <h3>Looped Animation Link</h3>
+      <a
+        href={animationUrl.url}
+        target="_blank"
+        style={{
+          margin: "10px 0",
+          color: "blue",
+          wordBreak: "break-all"
+        }}
+      >
+        {animationUrl.url}
+      </a>
 
-  if (animationUrl.type === "generateLoop") {
-    return (
-      <div className="panel" style={{ textAlign: "center" }}>
-        <h3>Looped Animation</h3>
-        <p><strong>Loop Count:</strong> {loopCount}</p>
-        <a href={animationUrl.url} target="_blank" rel="noreferrer">
-          {animationUrl.url}
-        </a>
-
-        <iframe
-          src={animationUrl.url}
-          width="100%"
-          height="400"
-          style={{ border: "none", marginTop: "20px" }}
-        />
-      </div>
-    );
-  }
-
+      <iframe
+        src={animationUrl.url}
+        width="80%"
+        height="400"
+        style={{
+          border: "none",
+          marginTop: "20px"
+        }}
+      />
+    </div>
+  );
+}
   if (animationUrl.type === "dual") {
     return (
       <div>
@@ -130,18 +132,24 @@ const AnimationViewer = ({ animationUrl }) => {
         <div className="dual-view">
           <div className="viewer-box">
             <h4>Interactive</h4>
-            <iframe src={animationUrl.interactive} width="100%" height="300" />
+            <iframe src={animationUrl.interactive} 
+            width="100%" 
+            height="300" 
+            />
           </div>
 
           <div className="viewer-box">
             <h4>Narrated</h4>
-            <iframe src={animationUrl.normal} width="100%" height="300" />
+            <iframe src={animationUrl.normal} 
+            width="100%" 
+            height="300" 
+            />
           </div>
         </div>
       </div>
     );
   }
-
+  
   if (animationUrl.type === "usage") {
     const data = animationUrl.data || {};
 
@@ -154,17 +162,29 @@ const AnimationViewer = ({ animationUrl }) => {
         ) : (
           Object.entries(data).map(([key, value]) => (
             <div key={key} className="card">
-              <p><strong>{key}:</strong> {value}</p>
+              <h4>{key}</h4>
+
+              {typeof value === "object" && value !== null ? (
+                Object.entries(value).map(([subKey, subVal]) => (
+                  <p key={subKey}>
+                    <strong>{subKey}:</strong>{" "}
+                    {typeof subVal === "object"
+                      ? JSON.stringify(subVal)
+                      : subVal}
+                  </p>
+                ))
+              ) : (
+                <p>{value}</p>
+              )}
             </div>
           ))
         )}
       </div>
     );
   }
-
+  
   if (animationUrl.type === "viewed") {
     const data = animationUrl.data || [];
-
     return (
       <div className="panel">
         <h3>Viewed Animations</h3>
