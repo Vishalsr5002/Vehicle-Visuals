@@ -44,7 +44,7 @@ export const apiParameters = {
     { label: "Login ID", name: "subscriber_login_id", required: true },
     { label: "Password", name: "subscriber_password", required: true },
     { label: "API Key", name: "api_key", required: true },
-    { label: "Part ID", name: "part_id", required: true },
+    { label: "Part ID", name: "partId", required: true },
     { label: "Module Name", name: "module_name", required: true },
     { label: "Method Name", name: "method_name", required: true },
     { label: "Language", name: "lang" },
@@ -121,5 +121,64 @@ export const apiParameters = {
     { label: "API Key", name: "apiKey", required: true },
     { label: "Module Name", name: "moduleName", required: true },
     { label: "Part ID", name: "partId", required: true }
+    ],
+
+    auto: [
+      { label: "UserName", name: "username", required: true},
+      { label: "Password", name: "password", required: true},
+      { label: "API Key", name: "apiKey", required: true},
+      { label: "Language", name: "lang" },
+      { label: "Flash", name: "flash"}
+    ],
+
+    lookup: [
+      { label: "API Key", name: "apiKey", required: true},
+      { label: "Module Name", name: "moduleName", required: true },
+      { label: "Method Name", name: "methodName", required: true }
+    ],
+
+    prompt: [
+      { label: "API Key", name: "apiKey", required: true},
+      { label: "Module Name", name: "moduleName", required: true },
+      { label: "Method Name", name: "methodName", required: true }
+    ],
+
+    lite: [
+      { label: "API Key", name: "apiKey", required: true},
+      { label: "Module Name", name: "moduleName", required: true },
+      { label: "Method Name", name: "methodName", required: true }
+    ],
+
+    pdf: [
+      { label: "API Key", name: "apiKey", required: true},
+      { label: "Module Name", name: "moduleName", required: true },
+      { label: "Method Name", name: "methodName", required: true },
+      { label: "Part ID", name: "partId", required: true },
+      { label: "Language", name: "lang" },
+      { label: "Diversed", name: "diversed" }
+    ],
+
+    get: [
+      { label: "UserName", name: "username", required: true},
+      { label: "Password", name: "password", required: true},
+      { label: "Module Name", name: "moduleName"},
+      { label: "Method Name", name: "methodName"}
+    ],
+
+    preference: [
+      { label: "UserName", name: "username", required: true},
+      { label: "Password", name: "password", required: true},
+      { label: "Module Name", name: "moduleName", required: true},
+      { label: "Method Name", name: "methodName", required: true},
+      { label: "Language", name: "lang"}
+    ],
+
+    details: [
+      { label: "UserName", name: "username", required: true},
+      { label: "Password", name: "password", required: true},
+      { label: "Part ID", name: "partID", required: true},
+      { label: "Module Name", name: "moduleName", required: true},
+      { label: "Method Name", name: "methodName", required: true},
+      { label: "Website Url", name: "websiteurl"}
     ]
 };
