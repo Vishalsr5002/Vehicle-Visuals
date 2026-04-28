@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import RealTimeClock from "./RealTimeClock";
 import { getVideoDetails } from "../services/api";
 import { FileText } from "lucide-react";
+//import pdfRoutes from "./routes/pdf.js"; 
 
 const AnimationViewer = ({ animationUrl, goBack }) => {
   const [loading, setLoading] = useState(false);
@@ -24,6 +25,7 @@ const AnimationViewer = ({ animationUrl, goBack }) => {
   const handleGeneratePDF = async () => {
   try {
     const data = animationUrl?.data || {};
+    console.log("Sending data:", data); 
     const res = await fetch("http://localhost:5000/api/generate-pdf", {
       method: "POST",
       headers: {
@@ -31,25 +33,21 @@ const AnimationViewer = ({ animationUrl, goBack }) => {
       },
       body: JSON.stringify({
         title: data.title || "Animation Report",
-        leftText: data.description || "The clutch master cylinder is a vital hydraulic component in manual transmission vehicles that acts as a translator between the drivers foot and the clutch mechanism. When you press the clutch pedal, a pushrod connected to the pedal forces a piston inside the master cylinder to move.",
-        rightText: "This mechanical movement compresses hydraulic fluid—typically brake fluid—within a sealed chamber, generating high hydraulic pressure. This pressurized fluid then travels through a hydraulic line to the clutch slave cylinder, which in turn actuates the clutch fork and release bearing to disengage the engine from the transmission.",
-        image1: data.image1 || "https://via.placeholder.com/300x200?text=Animation+Image",
-        image2: data.image2 || "https://via.placeholder.com/300x200?text=Brake+System"
-      }
-    )
-  }
-);
+        leftText: data.description || "Default left content",
+        rightText: "Default right content",
+        image1:
+          data.image1 || "http://localhost:5173/carimg.jpg",
+        image2:
+          data.image2 || "http://localhost:5173/spares.jpg"
+      })
+    });
     if (!res.ok) {
-      const text = await res.text();
-      console.error("Server error:", text);
+      const errText = await res.text();
+      console.error("Server error:", errText);
       alert("PDF generation failed");
       return;
     }
     const blob = await res.blob();
-    if (blob.type !== "application/pdf") {
-      alert("Invalid PDF response");
-      return;
-    }
     const fileURL = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = fileURL;
@@ -57,6 +55,7 @@ const AnimationViewer = ({ animationUrl, goBack }) => {
     document.body.appendChild(a);
     a.click();
     a.remove();
+
   } catch (err) {
     console.error("PDF error:", err);
     alert("Something went wrong");
@@ -80,7 +79,8 @@ const AnimationViewer = ({ animationUrl, goBack }) => {
           background: "#333",
           color: "#fff",
           cursor: "pointer"
-        }}
+        }
+      }
       >
         Back
       </button>
@@ -135,7 +135,7 @@ const AnimationViewer = ({ animationUrl, goBack }) => {
     const interactiveLink = data.video_url.includes("is_interactive")
       ? data.video_url.replace("is_interactive=0", "is_interactive=1")
       : data.video_url + "&is_interactive=1";
-
+  
     return (
       <div className="panel">
         <HeaderBar />
