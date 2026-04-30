@@ -2,20 +2,28 @@ import { useEffect, useState } from "react";
 import { apiParameters } from "../config/apiParameters";
 import { searchAnimations } from "../services/api";
 import { getAnimationShareLink } from "../services/api";
-import { updateAnimationLink } from "../services/api";
-import { getAnimationLinkUsage } from "../services/api";
-import { getUsageReport } from "../services/api";
-import {generateLoopedAnimationLink } from "../services/api";
+import {
+  updateAnimationLink,
+  getAnimationLinkUsage,
+  getUsageReport,
+  getUserDetails,
+  getApiKey,
+  getDynamicLink
+} from "../services/api";
 
 export const ParametersPanel = ({
   selectedOption,
   setAnimationUrl,
   formData,
-  setFormData
+  setFormData,
+  apiKey,
+  setApiKey,
+  handleGetUserPreferences
 }) => {
   const [debouncedTerm, setDebouncedTerm] = useState("");
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState(null);
+  const [results, setResults] = useState([]);
 
   useEffect(() => {
     setFormData({});
@@ -29,6 +37,7 @@ export const ParametersPanel = ({
       [e.target.name]: e.target.value
     }));
   };
+
   useEffect(() => {
     if (selectedOption !== "search") return;
     const timer = setTimeout(() => {
@@ -42,6 +51,7 @@ export const ParametersPanel = ({
       handleSearch();
     }
   }, [debouncedTerm]);
+
   const handleSearch = async () => {
     try {
       setLoading(true);
@@ -57,25 +67,42 @@ export const ParametersPanel = ({
       setLoading(false);
     }
   };
+
+  const buildAnimationLinks = (partId) => {
+    const base = `https://motovisuals.com/thirdpartyapi/#!/viewAnimation/${partId}?show_menu=0&show_left_sidebar=0&show_description=0&video_only=0&auto_play=0`;
+    return {
+      interactive: `${base}&is_interactive=1`,
+      narrated: `${base}&is_interactive=0`
+    };
+  };
+  //const getAuthData = () => {
+    //const username = formData.username || formData.login || formData.subscriber_login_id || "";
+    //const password = formData.password || formData.loginPassword || formData.subscriber_password || "";
+    //return { username, password };
+    // };
+
   const handleRun = async () => {
     if (!selectedOption) return;
     setLoading(true);
     setStatus(null);
+    setResults([]);
     try {
       const partId = (formData.partId || "").trim();
       if (selectedOption === "videoDetails") {
         if (!partId) return alert("Part ID is required");
+        const { interactive, narrated } = buildAnimationLinks(partId);
         setAnimationUrl({
           type: "dual",
-          interactive: `https://dev.motovisuals.com/thirdpartyapi/#!/viewAnimation/${partId}?is_interactive=1`,
-          normal: `https://motovisuals.com/thirdpartyapi/#!/viewAnimation/${partId}?is_interactive=0`
-        });
-      }
-      
+          interactive,
+          normal: narrated
+        }
+      );
+    }
+
       else if (selectedOption === "share") {
         if (!partId) return alert("Part ID required");
         const res = await getAnimationShareLink(partId);
-        if (!res || !res.unique_id) {
+        if (!res || !res.video_url) {
           setStatus({ type: "error", msg: "Failed to generate link" });
           return;
         }
@@ -84,31 +111,20 @@ export const ParametersPanel = ({
           data: { ...res, partId }
         });
       }
+
       else if (selectedOption === "generateLoop") {
         const { login, password, mute } = formData;
         if (!login || !password) {
           alert("Login & Password required");
           return;
         }
-        const res = await generateLoopedAnimationLink({
-          username: login,
-          password: password,
-          mute: mute || 1
-        }
-      );
-        console.log("LOOP RESPONSE", res);
-        if (!res || !res.status || !res.url) {
-          setStatus({
-            type: "error",
-            msg: "Failed to generate the loop link"
-          });
-          return;
-        }
+        const loopUrl = `https://interim.vehiclevisuals.com/looped-animations.php?username=${login}&password=${password}&mute=${mute || 1}`;
         setAnimationUrl({
-          type: "generateLoop", 
-          url: res.url
+          type: "generateLoop",
+          url: loopUrl
         });
       }
+
       else if (selectedOption === "update") {
         const res = await updateAnimationLink({
           unique_id: formData.uniqueId,
@@ -116,7 +132,7 @@ export const ParametersPanel = ({
           ref_id: formData.referenceId,
           cost: formData.cost,
           track_type: formData.trackType || "email",
-          lang : "en_USA"
+          lang: "en_USA"
         });
         setStatus({
           type: res?.status ? "success" : "error",
@@ -132,34 +148,117 @@ export const ParametersPanel = ({
           data: res?.data || {}
         });
       }
+
       else if (selectedOption === "viewed") {
         const res = await getUsageReport({
           date_from: formData.dateFrom,
           date_to: formData.dateTo,
           unique_id: formData.uniqueId
         });
-
         setAnimationUrl({
           type: "viewed",
           data: res?.data || []
+        }
+      );
+    }
+
+      else if (selectedOption === "details") {
+        const username = formData.username || formData.login || formData.subscriber_login_id;
+        const password = formData.password || formData.loginPassword || formData.subscriber_password;
+        if (!username || !password) {
+          return alert("Username & Password required");
+        }
+        const res = await getUserDetails(username, password);
+        if (!res.status) {
+          setStatus({
+            type: "error",
+            msg: res.message || "Invalid user"
+          });
+        return;
+        }
+        setAnimationUrl({
+          type: "userDetails",
+          data: res.data
         });
       }
-
+      else if (selectedOption === "get") {
+        const username = formData.username;
+        const password = formData.password;
+        if (!username || !password) {
+          return alert("Username & Password required");
+        }
+        const res = await getApiKey(username, password);
+        if (!res?.status) {
+          setStatus({
+            type: "error",
+            msg: res?.message || "Failed to get API key"
+          });
+          return;
+        }
+        setAnimationUrl({
+          type: "apiKey",
+          data: res.data
+        })
+        setApiKey(res?.data.apiKey || "");
+      }
+      
+      else if (selectedOption === "links") {
+        const partId = formData.partId;
+        const roNumber = formData.roNumber;
+        const apikey = formData.apiKey;
+        if (!apiKey) {
+          return alert("API Key required");
+        }
+        if (!partId) {
+          return alert("Part ID required");
+        }
+        const res = await getDynamicLink({
+          apiKey,
+          partId,
+          roNumber
+        });
+        if (!res?.status) {
+          setStatus({
+            type: "error",
+            msg: res?.message || "Failed to generate link"
+          });
+          return;
+        }
+        setAnimationUrl({
+          type: "emailLink",
+          url: res.data?.url || res.data?.data?.url
+        });
+      }
     } catch (err) {
       console.error(err);
+
       setStatus({
         type: "error",
-        msg: "Something went wrong"
+        msg: err.message || "Something went wrong"
       });
     } finally {
       setLoading(false);
     }
+    console.log("Selected Option:", selectedOption);
   };
+
   const parameters = apiParameters[selectedOption] || [];
 
   return (
     <div className="search">
       <h3>API Parameters</h3>
+
+      {selectedOption === "preference" && (
+        <div className="form-group">
+          <label>API Key *</label>
+          <input
+            type="text"
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
+            placeholder="Enter API Key"
+          />
+        </div>
+      )}
 
       {parameters.map((param) => (
         <div className="form-group" key={param.name}>
@@ -178,7 +277,11 @@ export const ParametersPanel = ({
       {selectedOption && (
         <button
           className="submit-Btn"
-          onClick={handleRun}
+          onClick={
+            selectedOption === "preference"
+              ? handleGetUserPreferences
+              : handleRun
+          }
           disabled={loading}
         >
           {loading ? "Processing..." : "Run API"}
@@ -188,6 +291,12 @@ export const ParametersPanel = ({
       {status && (
         <div className={`update-status ${status.type}`}>
           {status.msg}
+
+          {results.length > 0 && (
+            <div className="getUsageReport-results">
+              <pre>{JSON.stringify(results, null, 2)}</pre>
+            </div>
+          )}
         </div>
       )}
     </div>
