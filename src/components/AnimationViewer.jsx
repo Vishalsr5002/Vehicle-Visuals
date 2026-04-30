@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import RealTimeClock from "./RealTimeClock";
 import { getVideoDetails } from "../services/api";
 import { FileText } from "lucide-react";
-//import pdfRoutes from "./routes/pdf.js"; 
 
 const AnimationViewer = ({ animationUrl, goBack }) => {
   const [loading, setLoading] = useState(false);
@@ -13,6 +12,7 @@ const AnimationViewer = ({ animationUrl, goBack }) => {
     const timer = setTimeout(() => setLoading(false), 300);
     return () => clearTimeout(timer);
   }, [animationUrl]);
+
   useEffect(() => {
     const loadVideo = async () => {
       if (animationUrl?.partId) {
@@ -23,44 +23,45 @@ const AnimationViewer = ({ animationUrl, goBack }) => {
     loadVideo();
   }, [animationUrl]);
   const handleGeneratePDF = async () => {
-  try {
-    const data = animationUrl?.data || {};
-    console.log("Sending data:", data); 
-    const res = await fetch("http://localhost:5000/api/generate-pdf", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        title: data.title || "Animation Report",
-        leftText: data.description || "Default left content",
-        rightText: "Default right content",
-        image1:
-          data.image1 || "http://localhost:5173/carimg.jpg",
-        image2:
-          data.image2 || "http://localhost:5173/spares.jpg"
-      })
-    });
-    if (!res.ok) {
-      const errText = await res.text();
-      console.error("Server error:", errText);
-      alert("PDF generation failed");
-      return;
-    }
-    const blob = await res.blob();
-    const fileURL = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = fileURL;
-    a.download = "animation-report.pdf";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+    try {
+      const data = animationUrl?.data || {};
+      console.log("Sending data:", data);
+      const res = await fetch("http://localhost:5000/api/generate-pdf", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          title: data.title || "Animation Report",
+          leftText: data.description || "Default left content",
+          rightText: "Default right content",
+          image1:
+            data.image1 || "http://localhost:5173/carimg.jpg",
+          image2:
+            data.image2 || "http://localhost:5173/spares.jpg"
+        })
+      });
 
-  } catch (err) {
-    console.error("PDF error:", err);
-    alert("Something went wrong");
-  }
-};
+      if (!res.ok) {
+        const errText = await res.text();
+        console.error("Server error:", errText);
+        alert("PDF generation failed");
+        return;
+      }
+      const blob = await res.blob();
+      const fileURL = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = fileURL;
+      a.download = "animation-report.pdf";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } catch (err) {
+      console.error("PDF error:", err);
+      alert("Something went wrong");
+    }
+  };
+
   const HeaderBar = () => (
     <div
       style={{
@@ -79,8 +80,7 @@ const AnimationViewer = ({ animationUrl, goBack }) => {
           background: "#333",
           color: "#fff",
           cursor: "pointer"
-        }
-      }
+        }}
       >
         Back
       </button>
@@ -93,6 +93,7 @@ const AnimationViewer = ({ animationUrl, goBack }) => {
       />
     </div>
   );
+
   if (!animationUrl) {
     return (
       <div className="animation-box">
@@ -100,14 +101,47 @@ const AnimationViewer = ({ animationUrl, goBack }) => {
       </div>
     );
   }
-
   if (loading) {
     return (
       <div className="animation-box">
-        <p>Loading...</p>
+        <p>Loading</p>
       </div>
     );
   }
+  if (animationUrl.type === "userDetails") {
+  const data = animationUrl.data || {};
+  return (
+    <div className="panel">
+      <h3>User Details</h3>
+      <div className="card">
+        <p>
+          <strong>Status:</strong>{" "}
+          {data.status ? "Valid User" : "Invalid User"}
+        </p>
+
+        <p>
+          <strong>Message:</strong> {data.message || "No message"}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+  if (animationUrl.type === "userDetails") {
+  const data = animationUrl.data;
+  return (
+    <div className="panel">
+      <HeaderBar />
+      <h3>User Details</h3>
+
+      <div className="card">
+        <p><b>Status:</b> {data.status ? "Valid User" : "Invalid"}</p>
+        <p><b>Message:</b> {data.message}</p>
+      </div>
+    </div>
+  );
+}
+
   if (animationUrl.type === "search") {
     const interactiveLink = "https://dev.motovisuals.com/thirdpartyapi/#!/viewAnimation/7011?is_interactive=1";
     const narratedLink = "https://motovisuals.com/thirdpartyapi/#!/viewAnimation/7011?is_interactive=0";
@@ -128,6 +162,27 @@ const AnimationViewer = ({ animationUrl, goBack }) => {
       </div>
     );
   }
+  {animationUrl?.type === "emailLink" && (
+  <div>
+    <h4>Generated Link</h4>
+    <input
+      type="text"
+      value={animationUrl.url}
+      readOnly
+      style={{ width: "100%", padding: "8px" }}
+    />
+    
+    <div style={{ marginTop: "10px" }}>
+      <button onClick={() => navigator.clipboard.writeText(animationUrl.url)}>
+        Copy
+      </button>
+      <a href={animationUrl.url} target="_blank">
+        <button>Open</button>
+      </a>
+    </div>
+  </div>
+)}
+
   if (animationUrl.type === "share") {
     const data = animationUrl.data;
     if (!data?.video_url) return <p>Invalid Share Data</p>;
@@ -135,7 +190,7 @@ const AnimationViewer = ({ animationUrl, goBack }) => {
     const interactiveLink = data.video_url.includes("is_interactive")
       ? data.video_url.replace("is_interactive=0", "is_interactive=1")
       : data.video_url + "&is_interactive=1";
-  
+
     return (
       <div className="panel">
         <HeaderBar />
@@ -157,6 +212,7 @@ const AnimationViewer = ({ animationUrl, goBack }) => {
       </div>
     );
   }
+
   if (animationUrl.type === "single") {
     const data = animationUrl.data;
 
@@ -164,17 +220,20 @@ const AnimationViewer = ({ animationUrl, goBack }) => {
       <div className="panel" style={{ textAlign: "center" }}>
         <HeaderBar />
         <h3>{data.title}</h3>
+
         {videoData?.videoUrl ? (
           <video width="100%" height="400" controls autoPlay>
             <source src={videoData.videoUrl} type="video/mp4" />
           </video>
         ) : (
           <iframe src={data.url} width="100%" height="400" />
-        )}
-        <p style={{ marginTop: "15px" }}>{data.description}</p>
+        )
+      }
+      <p style={{ marginTop: "15px" }}>{data.description}</p>
       </div>
     );
   }
+
   if (animationUrl.type === "looped") {
     return (
       <div className="panel" style={{ textAlign: "center" }}>
@@ -185,14 +244,11 @@ const AnimationViewer = ({ animationUrl, goBack }) => {
           {animationUrl.url}
         </a>
 
-        <iframe
-          src={animationUrl.url}
-          width="80%"
-          height="400"
-        />
+        <iframe src={animationUrl.url} width="80%" height="400" />
       </div>
     );
   }
+
   if (animationUrl.type === "dual") {
     return (
       <div>
@@ -213,6 +269,7 @@ const AnimationViewer = ({ animationUrl, goBack }) => {
       </div>
     );
   }
+
   if (animationUrl.type === "usage") {
     const data = animationUrl.data || {};
 
@@ -230,6 +287,7 @@ const AnimationViewer = ({ animationUrl, goBack }) => {
       </div>
     );
   }
+
   if (animationUrl.type === "viewed") {
     const data = animationUrl.data || [];
 
