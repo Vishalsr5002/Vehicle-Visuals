@@ -11,7 +11,8 @@ const normalizeSearchData = (data) => {
       item.image_url ||
       item.thumbnail ||
       "https://img.freepik.com/premium-photo/various-car-parts-accessories-isolated-white-background_771335-35715.jpg"
-  }));
+    }
+  ));
 };
 
 export const searchAnimations = async (term, options = {}) => {
@@ -25,7 +26,6 @@ export const searchAnimations = async (term, options = {}) => {
       lang: options.lang || "en_US",
       brand: options.brand || "generic"
     }).toString();
-
     const url = `${BASE_API_URL}?${query}`;
     console.log("Search API:", url);
     const res = await fetch(url);
@@ -52,6 +52,94 @@ export const searchAnimations = async (term, options = {}) => {
   }
 };
 
+export const getUserDetails = async (username, password) => {
+  try {
+    const url = `http://localhost:5000/api/user-details?loginId=${username}&password=${password}`;
+    console.log("Calling User Details API:", url);
+    const res = await fetch(url);
+    const data = await res.json();
+    return data;
+  } catch (error) {
+    console.error("User Details API error:", error);
+    return {
+      status: false,
+      message: error.message
+    };
+  }
+};
+
+export const trackAnimationView = async (unique_id, type) => {
+  try {
+    await fetch("http://localhost:5000/api/track-view", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        job_id : unique_id,
+        type 
+      })
+    });
+  } catch (err) {
+    console.error("Tracking error:", err);
+  }
+};
+
+export const getViewCount = async (unique_id) => {
+  try {
+    const res = await fetch(
+      `http://localhost:5000/api/view-count/${unique_id}`
+    );
+    const data = await res.json();
+    return data?.data || { interactive: 0, narrated: 0 };
+  } catch {
+    return { interactive: 0, narrated: 0 };
+  }
+};
+
+export const getApiKey = async (username, password) => {
+  try {
+    const url = `http://localhost:5000/api/get-api-key?loginId=${username}&password=${password}`;
+    console.log("Getting API Key:", url);
+    const res = await fetch(url);
+    const data = await res.json();
+    return data;
+  } catch (error) {
+    console.error("Get API Key error:", error);
+    return {
+      status: false,
+      message: error.message
+    };
+  }
+};
+
+export const getDynamicLink = async ({
+  apiKey,
+  partId,
+  roNumber = "",
+  expireDays = 7
+}) => {
+  try {
+    const url = `http://localhost:5000/api/generate-link?` + 
+    `apiKey=${apiKey}&partId=${partId}&roNumber=${roNumber}&expireDays=${expireDays}`;
+    console.log("Generating Base Link:", url);
+    const res = await fetch(url);
+    const result = await res.json();
+    if (!result?.status) {
+      return result;
+    }
+
+    return result;
+
+  } catch (error) {
+    console.error("Dynamic Link Error:", error);
+    return {
+      status: false,
+      message: error.message
+    };
+  }
+};
+
 export const getUsageReport = async (params = {}) => {
   try {
     const query = new URLSearchParams({
@@ -70,7 +158,6 @@ export const getUsageReport = async (params = {}) => {
     const res = await fetch(url);
     const data = await res.json();
     console.log("Usage Report Response:", data);
-
     if (!data?.status) {
       return { status: false, data: [] };
     }
@@ -105,7 +192,8 @@ export const getAnimationLinkUsage = async (jobId) => {
       api_key: API_KEY,
       moduleName: "emailananimation",
       methodName: "getAnimationLinkUsage",
-      job_id: jobId
+      job_id: jobId,
+      //part_id : partId
     }).toString();
     const url = `${BASE_API_URL}?${query}`;
     console.log("Usage API:", url);
@@ -121,8 +209,7 @@ export const getAnimationLinkUsage = async (jobId) => {
 };
 
 export const getAnimationUrls = (partId) => {
-  if (!partId) 
-  return null;
+  if (!partId) return null;
   const base = "https://dev.motovisuals.com/api/animation_link/view/interactive_animation.php";
   const params = {
     login: "motovisuals",
@@ -153,6 +240,7 @@ export const getAnimationUrls = (partId) => {
       })
   };
 };
+
 export const generateViewerLinks = (partId) => {
   if (!partId) return null;
   return {
@@ -169,7 +257,6 @@ export const getAnimationShareLink = async (partId) => {
       api_key: API_KEY,
       moduleName: "emailananimation",
       methodName: "getStreamingLink",
-      //ref_id: partId,
       part_id: partId,
       brand: "generic",
       lang: "en_US"
@@ -179,19 +266,28 @@ export const getAnimationShareLink = async (partId) => {
     const res = await fetch(url);
     const data = await res.json();
     console.log("Share API Response:", data);
-    if (Array.isArray(data)) return data[0];
-    if (data?.data && typeof data.data === "object") return data.data;
-    if (data?.video_url) return data;
-    if (!data?.video_url) {
-    console.error("Invalid Share API response:", data);
-    return null;
-  }
-    return null;
+    let result = null;
+    if (Array.isArray(data)) 
+      result = data[0];
+    else if (data?.data && typeof data.data === "object") 
+      result = data.data;
+    else if (data?.video_url)
+      result = data;
+    if (!result || !result.video_url) {
+      console.error("Invalid Share API response:", data);
+      return null;
+    }
+    return {
+      unique_id: result.unique_id || result.uid || "",
+      video_url: result.video_url,
+      video_title: result.video_title || "Animation"
+    };
   } catch (err) {
     console.error("Share Link error:", err);
     return null;
   }
 };
+
 export const updateAnimationLink = async ({
   unique_id,
   job_id,
@@ -208,15 +304,12 @@ export const updateAnimationLink = async ({
       api_key: API_KEY,
       moduleName: "emailananimation",
       methodName: "updateAnimationLink",
-      unique_id: Array.isArray(unique_id)
-        ? unique_id
-        : [unique_id],
+      unique_id: Array.isArray(unique_id) ? unique_id : [unique_id],
       job_id,
       ref_id,
       cost,
       track_type
     };
-
     console.log("Update API Payload:", payload);
     const res = await fetch(BASE_API_URL, {
       method: "POST",
@@ -233,6 +326,7 @@ export const updateAnimationLink = async ({
     return null;
   }
 };
+
 export const getVideoDetails = async (partId, options = {}) => {
   if (!partId) return null;
   try {
@@ -263,23 +357,27 @@ export const getVideoDetails = async (partId, options = {}) => {
     return null;
   }
 };
+
 export const getLoopedAnimationLink = async ({
-  username,
+  login,
+  //username,
   password,
   mute = 0
 }) => {
-  if (!username || !password) return null;
+  if (!login || !password) return null;
   try {
-    const url = `http://interim.vehiclevisuals.com/api/loopedanimations/generate_loopedanimation_link.php?username=${username}&password=${password}&mute=${mute}`;
+    //const url = `http://interim.vehiclevisuals.com/api/loopedanimations/generate_loopedanimation_link.php?username=${login}&password=${password}&mute=${mute}`;
+    const url = `http://localhost:5000/api/loop/generate?username=${login}&password=${password}&mute=${mute}`;
     console.log("Looped API:", url);
     const res = await fetch(url);
-    const data = await res.json();
-    console.log("Looped API Response:", data);
-    // handle different formats safely
-    if (typeof data === "string") return data;
-    if (data?.url) return data.url;
-    if (data?.link) return data.link;
-    return null;
+    const text = await res.text();
+    console.log("Looped API RAW:", text);
+    try { 
+      const data = JSON.parse(text);
+      return data?.url || data?.link || null;
+    } catch {
+      return text.trim();
+    }
   } catch (err) {
     console.error("Looped API error:", err);
     return null;
@@ -291,7 +389,8 @@ export const generateLoopedAnimationLink = async ({
   mute = 1
 }) => {
   try {
-    const url = `http://interim.vehiclevisuals.com/api/loopedanimations/generate_loopedanimation_link.php?username=${username}&password=${password}&mute=${mute}`;
+    const url = `http://localhost:5000/api/loop/generate?username=${username}&password=${password}&mute=${mute}`;
+    //const url = `http://interim.vehiclevisuals.com/api/loopedanimations/generate_loopedanimation_link.php?username=${username}&password=${password}&mute=${mute}`;
     console.log("Loop API URL:", url);
     const res = await fetch(url);
     const text = await res.text();
@@ -311,9 +410,13 @@ export const generateLoopedAnimationLink = async ({
         url: data.url
       };
     }
-
+    if (data?.link) {
+      return {
+        status: true,
+        url: data.link
+      };
+    }
     return { status: false };
-
   } catch (err) {
     console.error("Loop API error:", err);
     return { status: false };
