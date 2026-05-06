@@ -23,28 +23,41 @@ const AnimationViewer = ({ animationUrl, goBack }) => {
   });
   useEffect(() => {
   if (animationUrl?.type !== "usage") return;
-  const id = animationUrl?.jobId;
-  if (!id) return;
   const fetchCounts = async () => {
-    const counts = await getViewCount(id);
-    setLiveCount(counts);
+    const counts = await getViewCount("all");
+    //let totalInteractive = 0;
+    //let totalNarrated = 0;
+    //Object.values(counts).forEach(item => {
+      //totalInteractive += item.interactive || 0;
+      //totalNarrated += item.narrated || 0;
+    //});
+    setLiveCount({
+      interactive: counts.interactive || 0,
+      narrated: counts.narrated || 0
+    });
   };
   fetchCounts();
   const interval = setInterval(fetchCounts, 2000);
-  return () => clearInterval(interval);
+  return ()=> clearInterval(interval);
 }, [animationUrl]);
+  useEffect(() => {
+    setTracked({
+      interactive: false,
+      narrated: false
+    });
+  }, [animationUrl]);
   useEffect(() => {
   if (animationUrl?.type !== "share") return;
   const id = animationUrl?.data?.unique_id;
   //const url = animationUrl?.data?.video_url;
   if (!id) return;
-  const fetchCounts = async () => {
-    const counts = await getViewCount(id);
-    setViewCount(counts);
-  };
-  fetchCounts();
-  const interval = setInterval(fetchCounts, 2000);
-  return () => clearInterval(interval);
+  //const fetchCounts = async () => {
+    //const counts = await getViewCount(id);
+    //setLiveCount(counts);
+    //setViewCount(counts);};
+  //fetchCounts();
+  //const interval = setInterval(fetchCounts, 2000);
+  //return () => clearInterval(interval);
 }, [animationUrl]);
   useEffect(() => {
     if (!animationUrl) return;
@@ -62,15 +75,13 @@ const AnimationViewer = ({ animationUrl, goBack }) => {
     };
     loadVideo();
   }, [animationUrl]);
-  const handleTrack = (type) => {
-  if (!data?.unique_id) return;
-  if (tracked[type]) return;
 
-  trackAnimationView(data.unique_id, type);
-
+const handleTrack = (type) => {
+  const id = animationUrl?.data?.unique_id || animationUrl?.partId || animationUrl?.jobId;
+  if(!id || tracked[type]) return;
+  trackAnimationView(id, type);
   setTracked(prev => ({
-    ...prev,
-    [type]: true
+    ...prev,[type]: true
   }));
 };
   const handleGeneratePDF = async () => {
@@ -131,11 +142,8 @@ const AnimationViewer = ({ animationUrl, goBack }) => {
           background: "#333",
           color: "#fff",
           cursor: "pointer"
-        }}
-      >
-        Back
-      </button>
-
+        }
+      }> Back</button>
       <FileText
         size={24}
         style={{ cursor: "pointer" }}
@@ -148,7 +156,7 @@ const AnimationViewer = ({ animationUrl, goBack }) => {
   if (!animationUrl) {
     return (
       <div className="animation-box">
-        <p>Select an animation to preview</p>
+        <strong><p>Select an Animation to Preview</p></strong>
       </div>
     );
   }
@@ -177,7 +185,7 @@ const AnimationViewer = ({ animationUrl, goBack }) => {
     </div>
   );
 }
-  
+
   if (animationUrl.type === "search") {
     const interactiveLink = "https://dev.motovisuals.com/thirdpartyapi/#!/viewAnimation/7011?is_interactive=1";
     const narratedLink = "https://motovisuals.com/thirdpartyapi/#!/viewAnimation/7011?is_interactive=0";
@@ -191,7 +199,8 @@ const AnimationViewer = ({ animationUrl, goBack }) => {
           src={interactiveLink}
           width="100%"
           height="400"
-          onLoad={() => trackAnimationView("search", "interactive")} 
+          //onLoad={() => trackAnimationView("search", "interactive")}
+          onLoad={() => handleTrack("interactive")} 
           />
         </div>
         <div className="viewer-box">
@@ -199,7 +208,7 @@ const AnimationViewer = ({ animationUrl, goBack }) => {
           <iframe src={narratedLink} 
           width="100%" 
           height="400"
-          onLoad={() => trackAnimationView("search", "narrated")} 
+          onLoad={() => handleTrack("narrated")} 
           />
         </div>
       </div>
@@ -231,7 +240,7 @@ const AnimationViewer = ({ animationUrl, goBack }) => {
           width="100%"
           height="300"
           allowFullScreen
-          onLoad={() => trackAnimationView(data.id || "emailLink", "interactive")}
+          onLoad={() => handleTrack("interactive")}
         />
       </div>
       <div className="viewer-box">
@@ -254,7 +263,7 @@ const AnimationViewer = ({ animationUrl, goBack }) => {
           width="100%"
           height="300"
           allowFullScreen
-          onLoad={() => trackAnimationView(data.id ||"emailLink", "narrated")}
+          onLoad={() => handleTrack("narrated")}
         />
       </div>
     </div>
@@ -263,7 +272,8 @@ const AnimationViewer = ({ animationUrl, goBack }) => {
 
 if (animationUrl.type === "share") {
   const data = animationUrl.data;
-  if (!data?.video_url) return <p>Invalid Share Data</p>;
+  if (!data?.video_url) 
+    return <p>Invalid Share Data</p>;
   //const narratedLink = data.video_url;
   const baseUrl = data.video_url;
   const interactiveLink = `${baseUrl}&is_interactive=1&_t=${Date.now()}`;
@@ -271,12 +281,12 @@ if (animationUrl.type === "share") {
   //const interactiveLink = data.video_url.includes("is_interactive")
     //? data.video_url.replace("is_interactive=0", "is_interactive=1")
     //: data.video_url + "&is_interactive=1";
-  const handleTrack = (type) => {
-    if (data?.unique_id) {
-      trackAnimationView(data.unique_id, type);
+  //const handleTrack = (type) => {
+    //if (data?.unique_id) {
+      //trackAnimationView(data.unique_id, type);
       //console.log(`Tracked ${type} view for ID:`, data.unique_id);
-    }
-  };
+    //}
+  //};
   //useEffect(() => {
     //if (!data?.unique_id) return;
     //const fetchCounts = async () => {
@@ -333,14 +343,16 @@ if (animationUrl.type === "share") {
         {videoData?.videoUrl ? (
           <video width="100%" height="400" controls autoPlay>
             <source src={videoData.videoUrl} type="video/mp4"
-            onPlay={() => trackAnimationView(animationUrl.partId, "interactive")} />
+            //onPlay={() => trackAnimationView(animationUrl.partId, "interactive")} />
+            onPlay={() => handleTrack("interactive")} />
           </video>
         ) : (
           <iframe 
           src={data.url} 
           width="100%" 
           height="400"
-          onLoad={() => trackAnimationView(animationUrl.partId, "narrated")}
+          onLoad={() => handleTrack("narrated")}
+          allowFullScreen
           />
         )
       }
@@ -348,7 +360,7 @@ if (animationUrl.type === "share") {
       </div>
     );
   }
-
+  
   if (animationUrl.type === "looped") {
     return (
       <div className="panel" style={{ textAlign: "center" }}>
@@ -359,10 +371,11 @@ if (animationUrl.type === "share") {
         </a>
         <iframe 
         src={animationUrl.url} 
-        width="80%" 
+        width="80%"
         height="400"
-        showFullScreen
-        onLoad={() => trackAnimationView("looped", "interactive")}
+        allowFullScreen
+        //showFullScreen
+        onLoad={() => handleTrack("interactive")}
         />
       </div>
     );
@@ -379,7 +392,7 @@ if (animationUrl.type === "share") {
             <iframe src={animationUrl.interactive} 
             width="100%" 
             height="400"
-            onLoad={() => trackAnimationView("dual", "interactive")}
+            onLoad={() => handleTrack("interactive")}
             />
           </div>
 
@@ -389,7 +402,7 @@ if (animationUrl.type === "share") {
             src={animationUrl.normal} 
             width="100%" 
             height="400" 
-            onLoad={() => trackAnimationView("dual", "narrated")}
+            onLoad={() => handleTrack("narrated")}
             />
           </div>
         </div>
