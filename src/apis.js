@@ -68,7 +68,7 @@ export const getUserDetails = async (username, password) => {
   }
 };
 
-export const trackAnimationView = async (unique_id, type) => {
+export const trackAnimationView = async (unique_id, type, animation_name, animation_id, video_url) => {
   try {
     await fetch("http://localhost:5000/api/track-view", {
       method: "POST",
@@ -76,8 +76,13 @@ export const trackAnimationView = async (unique_id, type) => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        job_id : unique_id,
-        type 
+        job_id: unique_id,
+        //part_id: unique_id,
+        //api_key: unique_id,
+        type,
+        animation_name,
+        animation_id,
+        video_url
       })
     });
   } catch (err) {
@@ -86,15 +91,11 @@ export const trackAnimationView = async (unique_id, type) => {
 };
 
 export const getViewCount = async (unique_id) => {
-  try {
-    const res = await fetch(
-      `http://localhost:5000/api/view-count/${unique_id}`
-    );
-    const data = await res.json();
-    return data?.data || { interactive: 0, narrated: 0 };
-  } catch {
-    return { interactive: 0, narrated: 0 };
-  }
+  const res = await fetch(
+    `http://localhost:5000/api/view-count/${unique_id}`
+  );
+  const data = await res.json();
+  return data;
 };
 
 export const getApiKey = async (username, password) => {
@@ -207,7 +208,6 @@ export const getAnimationLinkUsage = async (jobId) => {
     return null;
   }
 };
-
 export const getAnimationUrls = (partId) => {
   if (!partId) return null;
   const base = "https://dev.motovisuals.com/api/animation_link/view/interactive_animation.php";
@@ -240,7 +240,6 @@ export const getAnimationUrls = (partId) => {
       })
   };
 };
-
 export const generateViewerLinks = (partId) => {
   if (!partId) return null;
   return {
@@ -267,7 +266,7 @@ export const getAnimationShareLink = async (partId) => {
     const data = await res.json();
     console.log("Share API Response:", data);
     let result = null;
-    if (Array.isArray(data)) 
+    if (Array.isArray(data))
       result = data[0];
     else if (data?.data && typeof data.data === "object") 
       result = data.data;
@@ -324,6 +323,28 @@ export const updateAnimationLink = async ({
   } catch (err) {
     console.error("Update API error:", err);
     return null;
+  }
+};
+
+export const getViewedAnimations = async ({ from_date, to_date, unique_id }) => {
+  try {
+    const query = new URLSearchParams({
+      ...(from_date && { from_date }),
+      ...(to_date && { to_date }),
+      ...(unique_id && { unique_id })
+    }).toString();
+    const url =`http://localhost:5000/api/viewed-animations?${query}`;
+    console.log("Viewed Animations API:", url);
+    const res = await fetch(url);
+    const data = await res.json();
+    console.log("Viewed Animations Response:", data);
+    return data;
+  } catch (err) {
+    console.error("Viewed Animations Error:", err);
+    return {
+      status: false,
+      data: []
+    };
   }
 };
 
@@ -386,7 +407,7 @@ export const getLoopedAnimationLink = async ({
 export const generateLoopedAnimationLink = async ({
   username,
   password,
-  mute = 1
+  mute = 1 || 0
 }) => {
   try {
     const url = `http://localhost:5000/api/loop/generate?username=${username}&password=${password}&mute=${mute}`;
