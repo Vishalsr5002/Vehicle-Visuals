@@ -20,17 +20,18 @@ const AnimationViewer = ({ animationUrl, goBack }) => {
   const [liveCount, setLiveCount] = useState({
     interactive: 0,
     narrated: 0
-  });
+  }
+);
   useEffect(() => {
   if (animationUrl?.type !== "usage") return;
   const fetchCounts = async () => {
     const counts = await getViewCount("all");
-    //let totalInteractive = 0;
-    //let totalNarrated = 0;
-    //Object.values(counts).forEach(item => {
-      //totalInteractive += item.interactive || 0;
-      //totalNarrated += item.narrated || 0;
-    //});
+    let totalInteractive = 0;
+    let totalNarrated = 0;
+    Object.values(counts).forEach(item => {
+      totalInteractive += item.interactive || 0;
+      totalNarrated += item.narrated || 0;
+    });
     setLiveCount({
       interactive: counts.interactive || 0,
       narrated: counts.narrated || 0
@@ -65,7 +66,7 @@ const AnimationViewer = ({ animationUrl, goBack }) => {
     const timer = setTimeout(() => setLoading(false), 300);
     return () => clearTimeout(timer);
   }, [animationUrl]);
-
+  
   useEffect(() => {
     const loadVideo = async () => {
       if (animationUrl?.partId) {
@@ -77,11 +78,42 @@ const AnimationViewer = ({ animationUrl, goBack }) => {
   }, [animationUrl]);
 
 const handleTrack = (type) => {
-  const id = animationUrl?.data?.unique_id || animationUrl?.partId || animationUrl?.jobId;
-  if(!id || tracked[type]) return;
-  trackAnimationView(id, type);
-  setTracked(prev => ({
-    ...prev,[type]: true
+  const id =
+    animationUrl?.data?.unique_id ||
+    animationUrl?.partId ||
+    animationUrl?.jobId ||
+    "7011";
+
+  const animation_name =
+    animationUrl?.data?.video_title ||
+    animationUrl?.data?.title ||
+    "Clutch Animation";
+
+  const animation_id =
+    animationUrl?.data?.partId ||
+    animationUrl?.data?.part_id ||
+    animationUrl?.partId ||
+    "7011";
+
+  const video_url =
+    animationUrl?.data?.video_url ||
+    animationUrl?.interactive ||
+    animationUrl?.normal ||
+    "";
+
+  if (!id || tracked[type]) return;
+
+  trackAnimationView(
+    id,
+    animation_name,
+    type,
+    animation_id,
+    video_url
+  );
+
+  setTracked((prev) => ({
+    ...prev,
+    [type]: true
   }));
 };
   const handleGeneratePDF = async () => {
@@ -123,7 +155,7 @@ const handleTrack = (type) => {
       alert("Something went wrong");
     }
   };
-
+  
   const HeaderBar = () => (
     <div
       style={{
@@ -152,7 +184,7 @@ const handleTrack = (type) => {
       />
     </div>
   );
-
+  
   if (!animationUrl) {
     return (
       <div className="animation-box">
@@ -177,7 +209,6 @@ const handleTrack = (type) => {
           <strong>Status:</strong>{" "}
           {data.status ? "Valid User" : "Invalid User"}
         </p>
-
         <p>
           <strong>Message:</strong> {data.message || "No message"}
         </p>
@@ -208,7 +239,7 @@ const handleTrack = (type) => {
           <iframe src={narratedLink} 
           width="100%" 
           height="400"
-          onLoad={() => handleTrack("narrated")} 
+          onLoad={() => handleTrack("narrated")}
           />
         </div>
       </div>
@@ -434,27 +465,52 @@ if (animationUrl.type === "share") {
 }
 
   if (animationUrl.type === "viewed") {
-    const data = animationUrl.data || [];
-    return (
-      <div className="panel">
-        <HeaderBar />
-        <h3>Viewed Animations</h3>
+  const data = animationUrl.data || [];
 
-        {data.map((item) => (
-          <div key={item.id} className="card">
+  return (
+    <div className="panel">
+      <HeaderBar />
+
+      <h3>Viewed Animations Report</h3>
+
+      {data.length === 0 ? (
+        <p>No animations viewed for selected date</p>
+      ) : (
+        data.map((item, index) => (
+          <div
+            key={index}
+            className="card"
+            style={{
+              marginBottom: "20px",
+              padding: "15px"
+            }}
+          >
             <h4>{item.animation_name}</h4>
-            <p>{new Date(item.track_date_time).toLocaleString()}</p>
+
+            <p>
+              <strong>Viewed Type:</strong>{" "}
+              {item.type}
+            </p>
+
+            <p>
+              <strong>Viewed Time:</strong>{" "}
+              {new Date(
+                item.track_date_time
+              ).toLocaleString()}
+            </p>
 
             <iframe
               src={`https://dev.motovisuals.com/thirdpartyapi/#!/viewAnimation/${item.animation_id}?is_interactive=1`}
               width="100%"
-              height="200"
+              height="250"
+              allowFullScreen
             />
           </div>
-        ))}
-      </div>
-    );
-  }
+        ))
+      )}
+    </div>
+  );
+}
   return <p>Unsupported</p>;
 };
 
