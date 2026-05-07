@@ -2,10 +2,11 @@ import { useEffect, useState } from "react";
 import { apiParameters } from "../config/apiParameters";
 import { searchAnimations } from "../services/api";
 import { getAnimationShareLink } from "../services/api";
+import { updateAnimationLink } from "../services/api";  
+import { getAnimationLinkUsage } from "../services/api";
 import {
-  updateAnimationLink,
-  getAnimationLinkUsage,
-  getUsageReport,
+  //getUsageReport,
+  getViewedAnimations,
   getUserDetails,
   getApiKey,
   getDynamicLink
@@ -24,13 +25,12 @@ export const ParametersPanel = ({
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState(null);
   const [results, setResults] = useState([]);
-
   useEffect(() => {
     setFormData({});
     setStatus(null);
     setAnimationUrl(null);
   }, [selectedOption]);
-
+  
   const handleChange = (e) => {
     setFormData((prev) => ({
       ...prev,
@@ -45,13 +45,13 @@ export const ParametersPanel = ({
     }, 300);
     return () => clearTimeout(timer);
   }, [formData.term, selectedOption]);
-
+  
   useEffect(() => {
     if (selectedOption === "search" && debouncedTerm.trim()) {
       handleSearch();
     }
   }, [debouncedTerm]);
-
+  
   const handleSearch = async () => {
     try {
       setLoading(true);
@@ -67,7 +67,7 @@ export const ParametersPanel = ({
       setLoading(false);
     }
   };
-
+  
   const buildAnimationLinks = (partId) => {
     const base = `https://motovisuals.com/thirdpartyapi/#!/viewAnimation/${partId}?show_menu=0&show_left_sidebar=0&show_description=0&video_only=0&auto_play=0`;
     return {
@@ -75,12 +75,13 @@ export const ParametersPanel = ({
       narrated: `${base}&is_interactive=0`
     };
   };
+  
   //const getAuthData = () => {
     //const username = formData.username || formData.login || formData.subscriber_login_id || "";
     //const password = formData.password || formData.loginPassword || formData.subscriber_password || "";
     //return { username, password };
     // };
-
+    
   const handleRun = async () => {
     if (!selectedOption) return;
     setLoading(true);
@@ -98,7 +99,7 @@ export const ParametersPanel = ({
         }
       );
     }
-
+    
       else if (selectedOption === "share") {
         if (!partId) return alert("Part ID required");
         const res = await getAnimationShareLink(partId);
@@ -106,12 +107,18 @@ export const ParametersPanel = ({
           setStatus({ type: "error", msg: "Failed to generate link" });
           return;
         }
+        const base = `https://dev.motovisuals.com/thirdpartyapi/#!/viewAnimation/${partId}?show_menu=0&show_left_sidebar=0&show_description=0&video_only=0&auto_play=0`;
         setAnimationUrl({
           type: "share",
-          data: { ...res, partId }
+          data: {
+            ...res,
+            partId,
+            interactive: `${base}&is_interactive=1`,
+            narrated: `${base}&is_interactive=0`
+          }
         });
       }
-
+      
       else if (selectedOption === "generateLoop") {
         const { login, password, mute } = formData;
         if (!login || !password) {
@@ -124,7 +131,7 @@ export const ParametersPanel = ({
           url: loopUrl
         });
       }
-
+      
       else if (selectedOption === "update") {
         const res = await updateAnimationLink({
           unique_id: formData.uniqueId,
@@ -148,20 +155,21 @@ export const ParametersPanel = ({
           data: res?.data || {}
         });
       }
-
       else if (selectedOption === "viewed") {
-        const res = await getUsageReport({
-          date_from: formData.dateFrom,
-          date_to: formData.dateTo,
+        if(!formData.dateFrom || !formData.dateTo){
+           return alert("From Date and To Date Required");
+      }
+        const res = await getViewedAnimations({
+          from_date: formData.from_date || formData.dateFrom,
+          to_date: formData.to_date || formData.dateTo,
           unique_id: formData.uniqueId
         });
+      console.log("Viewed Animation Response", res);
         setAnimationUrl({
           type: "viewed",
           data: res?.data || []
-        }
-      );
-    }
-
+        });
+      }
       else if (selectedOption === "details") {
         const username = formData.username || formData.login || formData.subscriber_login_id;
         const password = formData.password || formData.loginPassword || formData.subscriber_password;
@@ -173,7 +181,8 @@ export const ParametersPanel = ({
           setStatus({
             type: "error",
             msg: res.message || "Invalid user"
-          });
+          }
+        );
         return;
         }
         setAnimationUrl({
@@ -201,22 +210,23 @@ export const ParametersPanel = ({
         })
         setApiKey(res?.data.apiKey || "");
       }
-      
       else if (selectedOption === "links") {
         const partId = formData.partId;
         const roNumber = formData.roNumber;
-        const apikey = formData.apiKey;
-        if (!apiKey) {
+        const apiKeyValue = formData.apiKey || apiKey;
+        if (!apiKeyValue) {
           return alert("API Key required");
         }
         if (!partId) {
           return alert("Part ID required");
         }
         const res = await getDynamicLink({
-          apiKey,
+          apiKey : apiKeyValue,
           partId,
           roNumber
         });
+        console.log("LINK RESPONSE:", res);
+        console.log("LINK DATA:", res?.data);
         if (!res?.status) {
           setStatus({
             type: "error",
@@ -226,24 +236,24 @@ export const ParametersPanel = ({
         }
         setAnimationUrl({
           type: "emailLink",
-          url: res.data?.url || res.data?.data?.url
+          interactive: res.data?.interactive,
+          narrated: res.data?.narrated,
+          shortInteractive: res.data?.shortInteractive,
+          shortNarrated: res.data?.shortNarrated
         });
       }
     } catch (err) {
       console.error(err);
-
       setStatus({
         type: "error",
         msg: err.message || "Something went wrong"
-      });
+    });
     } finally {
       setLoading(false);
     }
     console.log("Selected Option:", selectedOption);
   };
-
   const parameters = apiParameters[selectedOption] || [];
-
   return (
     <div className="search">
       <h3>API Parameters</h3>
