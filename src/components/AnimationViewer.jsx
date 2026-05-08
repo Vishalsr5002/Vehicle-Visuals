@@ -78,6 +78,7 @@ const AnimationViewer = ({ animationUrl, goBack }) => {
   }, [animationUrl]);
 
 const handleTrack = (type) => {
+
   const id =
     animationUrl?.data?.unique_id ||
     animationUrl?.partId ||
@@ -100,9 +101,15 @@ const handleTrack = (type) => {
     animationUrl?.interactive ||
     animationUrl?.normal ||
     "";
-
-  if (!id || tracked[type]) return;
-
+  console.log("HANDLE TRACK FIRED");
+  console.log({
+    id,
+    animation_name,
+    type,
+    animation_id,
+    video_url
+  });
+  if (!id) return;
   trackAnimationView(
     id,
     animation_name,
@@ -341,7 +348,7 @@ if (animationUrl.type === "share") {
         <h4>Narrated URL</h4>
         <input value={narratedLink} readOnly />
       </div>
-
+      
       <div className="viewer-box">
         <h4>Interactive Animation</h4>
         <iframe
@@ -349,9 +356,10 @@ if (animationUrl.type === "share") {
           width="100%"
           height="300"
           onLoad={() => handleTrack("interactive")}
+          allowFullScreen
         />
       </div>
-
+      
       <div className="viewer-box">
         <h4>Narrated Animation</h4>
         <iframe
@@ -359,6 +367,7 @@ if (animationUrl.type === "share") {
           width="100%"
           height="300"
           onLoad={() => handleTrack("narrated")}
+          allowFullScreen
         />
       </div>
     </div>
@@ -411,7 +420,7 @@ if (animationUrl.type === "share") {
       </div>
     );
   }
-
+  
   if (animationUrl.type === "dual") {
     return (
       <div>
@@ -423,16 +432,18 @@ if (animationUrl.type === "share") {
             <iframe src={animationUrl.interactive} 
             width="100%" 
             height="400"
+            showFullScreen
             onLoad={() => handleTrack("interactive")}
             />
           </div>
-
+          
           <div className="viewer-box">
             <h4>Narrated</h4>
-            <iframe 
+            <iframe
             src={animationUrl.normal} 
             width="100%" 
-            height="400" 
+            height="400"
+            showFullScreen 
             onLoad={() => handleTrack("narrated")}
             />
           </div>
@@ -440,7 +451,7 @@ if (animationUrl.type === "share") {
       </div>
     );
   }
-
+  
   if (animationUrl.type === "usage") {
   //useEffect(() => {
     //if (!animationUrl?.jobId) return;
@@ -463,16 +474,12 @@ if (animationUrl.type === "share") {
     </div>
   );
 }
-
   if (animationUrl.type === "viewed") {
   const data = animationUrl.data || [];
-
   return (
     <div className="panel">
       <HeaderBar />
-
       <h3>Viewed Animations Report</h3>
-
       {data.length === 0 ? (
         <p>No animations viewed for selected date</p>
       ) : (
@@ -485,29 +492,57 @@ if (animationUrl.type === "share") {
               padding: "15px"
             }}
           >
-            <h4>{item.animation_name}</h4>
-
+            <h4>{item.animation_name || "Animation"}</h4>
             <p>
               <strong>Viewed Type:</strong>{" "}
               {item.type}
             </p>
-
             <p>
               <strong>Viewed Time:</strong>{" "}
               {new Date(
                 item.track_date_time
-              ).toLocaleString()}
+              ).toLocaleString()
+            }
             </p>
-
             <iframe
               src={`https://dev.motovisuals.com/thirdpartyapi/#!/viewAnimation/${item.animation_id}?is_interactive=1`}
               width="100%"
               height="250"
-              allowFullScreen
+              //allowFullScreen
             />
           </div>
         ))
       )}
+    </div>
+  );
+}
+  if (animationUrl.type === "apiKey") {
+  const response = animationUrl.data || {};
+  return (
+    <div className="panel">
+      <HeaderBar />
+      <h3>API Key</h3>
+      <div className="card">
+        <p>
+          <strong>Status:</strong>{" "}
+          {response.api_key ? "Success" : "Failed"}
+        </p>
+
+        <p>
+          <strong>API Key:</strong>{" "}
+          {response.api_key || "No API Key"}
+        </p>
+        <button
+        className="submit-Btn"
+          onClick={() =>
+            navigator.clipboard.writeText(
+              response.api_key || ""
+            )
+          }
+        >
+          Copy API Key
+        </button>
+      </div>
     </div>
   );
 }
