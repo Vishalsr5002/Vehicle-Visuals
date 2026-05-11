@@ -2,11 +2,13 @@ import { useEffect, useState } from "react";
 import RealTimeClock from "./RealTimeClock";
 import { getVideoDetails } from "../services/api";
 import { FileText } from "lucide-react";
-import { trackAnimationView, getViewCount } from "../services/api";
+import { trackAnimationView, getViewCount, getViewedReport } from "../services/api";
 
 const AnimationViewer = ({ animationUrl, goBack }) => {
   const [loading, setLoading] = useState(false);
   const [videoData, setVideoData] = useState(null);
+  const [viewedData, setViewedData] = useState([]);
+  const [selectedDate, setSelectedDate] = useState("");
   const [tracked, setTracked] = useState({
     interactive: false,
     narrated: false
@@ -25,21 +27,29 @@ const AnimationViewer = ({ animationUrl, goBack }) => {
   useEffect(() => {
   if (animationUrl?.type !== "usage") return;
   const fetchCounts = async () => {
-    const counts = await getViewCount("all");
-    let totalInteractive = 0;
-    let totalNarrated = 0;
-    Object.values(counts).forEach(item => {
-      totalInteractive += item.interactive || 0;
-      totalNarrated += item.narrated || 0;
-    });
-    setLiveCount({
-      interactive: counts.interactive || 0,
-      narrated: counts.narrated || 0
-    });
+    try {
+      const id = animationUrl?.jobId || animationUrl?.partId || "7011";
+      const response = await getViewCount(id);
+      console.log(
+        "VIEW COUNT RESPONSE:",
+        response
+      );
+      setLiveCount({
+        interactive: response?.interactive || 0,
+        narrated: response?.narrated || 0
+      });
+    } catch (err) {
+      console.error(
+        "COUNT ERROR:",
+        err
+      );
+    }
   };
   fetchCounts();
-  const interval = setInterval(fetchCounts, 2000);
-  return ()=> clearInterval(interval);
+  const interval = setInterval(
+    fetchCounts, 2000
+  );
+  return () => clearInterval(interval);
 }, [animationUrl]);
   useEffect(() => {
     setTracked({
@@ -47,6 +57,13 @@ const AnimationViewer = ({ animationUrl, goBack }) => {
       narrated: false
     });
   }, [animationUrl]);
+  useEffect(() => {
+  if (animationUrl?.type !== "viewed") return;
+  if (animationUrl?.data) {
+    setViewedData(animationUrl.data);
+  }
+
+}, [animationUrl]);
   useEffect(() => {
   if (animationUrl?.type !== "share") return;
   const id = animationUrl?.data?.unique_id;
@@ -76,52 +93,66 @@ const AnimationViewer = ({ animationUrl, goBack }) => {
     };
     loadVideo();
   }, [animationUrl]);
+  
+const handleTrack = async (type, title = "") => {
+  try {
+    if (tracked[type]) return;
+    const job_id =
+      animationUrl?.data?.part_id ||
+      animationUrl?.partId ||
+      animationUrl?.jobId ||
+      "7011";
 
-const handleTrack = (type) => {
+    const animation_id =
+      animationUrl?.data?.part_id ||
+      animationUrl?.partId ||
+      "7011";
 
-  const id =
-    animationUrl?.data?.unique_id ||
-    animationUrl?.partId ||
-    animationUrl?.jobId ||
-    "7011";
+    let animation_name = "";
+    if (type === "interactive") {
+      animation_name = title || "Clutch (Interactive Animation)";
+    } else {
+      animation_name = title || "Clutch (Narrated Animation)";
+    }
+    let video_url = "";
+    if (type === "interactive") {
+      video_url =
+        animationUrl?.interactive ||
+        animationUrl?.data?.interactive ||
+        animationUrl?.shortInteractive ||
+        "";
+    } else {
+      video_url =
+        animationUrl?.narrated ||
+        animationUrl?.data?.narrated ||
+        animationUrl?.shortNarrated ||
+        animationUrl?.normal ||
+        "";
+    }
 
-  const animation_name =
-    animationUrl?.data?.video_title ||
-    animationUrl?.data?.title ||
-    "Clutch Animation";
+    console.log("TRACKING:", {
+      job_id,
+      animation_name,
+      animation_id,
+      type,
+      video_url
+    });
 
-  const animation_id =
-    animationUrl?.data?.partId ||
-    animationUrl?.data?.part_id ||
-    animationUrl?.partId ||
-    "7011";
+    await trackAnimationView(
+      job_id,
+      animation_name,
+      type,
+      animation_id,
+      video_url
+    );
 
-  const video_url =
-    animationUrl?.data?.video_url ||
-    animationUrl?.interactive ||
-    animationUrl?.normal ||
-    "";
-  console.log("HANDLE TRACK FIRED");
-  console.log({
-    id,
-    animation_name,
-    type,
-    animation_id,
-    video_url
-  });
-  if (!id) return;
-  trackAnimationView(
-    id,
-    animation_name,
-    type,
-    animation_id,
-    video_url
-  );
-
-  setTracked((prev) => ({
-    ...prev,
-    [type]: true
-  }));
+    setTracked((prev) => ({
+      ...prev,
+      [type]: true
+    }));
+  } catch (err) {
+    console.error("TRACK ERROR:", err);
+  }
 };
   const handleGeneratePDF = async () => {
     try {
@@ -135,11 +166,9 @@ const handleTrack = (type) => {
         body: JSON.stringify({
           title: data.title || "Animation Report",
           leftText: data.description || "Default left content",
-          rightText: "Default right content",
-          image1:
-            data.image1 || "http://localhost:5173/carimg.jpg",
-          image2:
-            data.image2 || "http://localhost:5173/spares.jpg"
+          rightText: data.description || "Default right content",
+          image1: data.image1 || "http://localhost:5173/carimg.jpg",
+          image2: data.image2 || "http://localhost:5173/spares.jpg"
         })
       }
     );
@@ -207,7 +236,9 @@ const handleTrack = (type) => {
     );
   }
   if (animationUrl.type === "userDetails") {
-  const data = animationUrl.data || {};
+  //const data = animationUrl.data || {};
+  const data = Array.isArray(animationUrl?.data)
+  ? animationUrl.data : [];
   return (
     <div className="panel">
       <h3>User Details</h3>
@@ -225,33 +256,74 @@ const handleTrack = (type) => {
 }
 
   if (animationUrl.type === "search") {
-    const interactiveLink = "https://dev.motovisuals.com/thirdpartyapi/#!/viewAnimation/7011?is_interactive=1";
-    const narratedLink = "https://motovisuals.com/thirdpartyapi/#!/viewAnimation/7011?is_interactive=0";
+  const data = animationUrl.data || [];
+  if (data.length === 0) {
     return (
       <div className="panel">
         <HeaderBar />
-        <h3>Animation Preview</h3>
-        <div className="viewer-box">
-          <h4>Interactive</h4>
-          <iframe 
-          src={interactiveLink}
-          width="100%"
-          height="400"
-          //onLoad={() => trackAnimationView("search", "interactive")}
-          onLoad={() => handleTrack("interactive")} 
-          />
-        </div>
-        <div className="viewer-box">
-          <h4>Narrated</h4>
-          <iframe src={narratedLink} 
-          width="100%" 
-          height="400"
-          onLoad={() => handleTrack("narrated")}
-          />
-        </div>
+        <h3>No Animations Found</h3>
       </div>
     );
   }
+  return (
+    <div className="panel">
+      <HeaderBar />
+      <h3>Animation Preview</h3>
+      {data.map((item, index) => {
+        const partId =
+          item.part_id ||
+          item.partId ||
+          "7011";
+        const interactiveLink = `https://dev.motovisuals.com/thirdpartyapi/#!/viewAnimation/${partId}` +
+          `?is_interactive=1`;
+        const narratedLink = `https://dev.motovisuals.com/thirdpartyapi/#!/viewAnimation/${partId}` +
+          `?is_interactive=0`;
+        return (
+          <div
+            key={index}
+            className="card"
+            style={{ marginBottom: "20px" }}
+          >
+            <h3>
+              {item.animation_name ||
+                item.title ||
+                "Animation"}
+            </h3>
+            <div className="viewer-box">
+              <h4>Interactive</h4>
+              <iframe
+                src={interactiveLink}
+                width="100%"
+                height="400"
+                onLoad={() =>
+                  handleTrack(
+                    "interactive",
+                    `${item.animation_name || "Animation"} (Interactive Animation)`
+                  )
+                }
+              />
+            </div>
+            <div className="viewer-box">
+              <h4>Narrated</h4>
+              <iframe
+                src={narratedLink}
+                width="100%"
+                height="400"
+                onLoad={() =>
+                  handleTrack(
+                    "narrated",
+                    `${item.animation_name || "Animation"} (Narrated Animation)`
+                  )
+                }
+              />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
   if (animationUrl?.type === "emailLink") {
   const data = animationUrl || {};
   return (
@@ -265,20 +337,38 @@ const handleTrack = (type) => {
           value={data.shortInteractive || ""}
           readOnly
         />
-        <div>
-          <button onClick={() => navigator.clipboard.writeText(data.shortInteractive || "")}>
+        <div
+          style={{
+            display: "flex",
+            gap: "10px",
+            margin: "10px 0"
+          }}
+        >
+          <button
+            onClick={() =>
+              navigator.clipboard.writeText(
+                data.shortInteractive || ""
+              )
+            }
+          >
             Copy
           </button>
-          <a href={data.interactive} target="_blank" rel="noreferrer">
+          <a
+            href={data.interactive}
+            target="_blank"
+            rel="noreferrer"
+          >
             <button>Open</button>
           </a>
         </div>
+
         <iframe
           src={data.interactive}
           width="100%"
           height="300"
           allowFullScreen
-          onLoad={() => handleTrack("interactive")}
+          title="Interactive Animation"
+          onLoad={() => handleTrack("interactive", "Clutch(Interactive Animation)")}
         />
       </div>
       <div className="viewer-box">
@@ -288,11 +378,26 @@ const handleTrack = (type) => {
           value={data.shortNarrated || ""}
           readOnly
         />
-        <div>
-          <button onClick={() => navigator.clipboard.writeText(data.shortNarrated || "")}>
+
+        <div
+          style={{
+            display: "flex",
+            gap: "10px",
+            margin: "10px 0"
+          }}
+        >
+          <button
+            onClick={() =>
+              navigator.clipboard.writeText(
+                data.shortNarrated || ""
+              )
+            }>
             Copy
           </button>
-          <a href={data.narrated} target="_blank" rel="noreferrer">
+          <a
+            href={data.narrated}
+            target="_blank"
+            rel="noreferrer">
             <button>Open</button>
           </a>
         </div>
@@ -301,78 +406,72 @@ const handleTrack = (type) => {
           width="100%"
           height="300"
           allowFullScreen
-          onLoad={() => handleTrack("narrated")}
+          title="Narrated Animation"
+          onLoad={() => handleTrack("narrated", "Clutch(Narrated Animation)")}
         />
       </div>
     </div>
   );
 }
-
 if (animationUrl.type === "share") {
   const data = animationUrl.data;
-  if (!data?.video_url) 
+  if (!data?.unique_id) {
     return <p>Invalid Share Data</p>;
-  //const narratedLink = data.video_url;
-  const baseUrl = data.video_url;
-  const interactiveLink = `${baseUrl}&is_interactive=1&_t=${Date.now()}`;
-  const narratedLink = `${baseUrl}&is_interactive=0&_t=${Date.now()}`;
-  //const interactiveLink = data.video_url.includes("is_interactive")
-    //? data.video_url.replace("is_interactive=0", "is_interactive=1")
-    //: data.video_url + "&is_interactive=1";
-  //const handleTrack = (type) => {
-    //if (data?.unique_id) {
-      //trackAnimationView(data.unique_id, type);
-      //console.log(`Tracked ${type} view for ID:`, data.unique_id);
-    //}
-  //};
-  //useEffect(() => {
-    //if (!data?.unique_id) return;
-    //const fetchCounts = async () => {
-      //const counts = await getViewCount(data.unique_id);
-      //setViewCount(counts);
-    //};
-    //fetchCounts();
-    //const interval = setInterval(fetchCounts, 2000);
-    //return () => clearInterval(interval);
-  //}, [data?.unique_id]);
+  }
+  const base = `https://dev.motovisuals.com/thirdpartyapi/#!/viewAnimation/${data.part_id || "7011"}`;
+  const interactiveLink = `${base}` +
+    `?show_menu=0` +
+    `&is_interactive=1` +
+    `&show_left_sidebar=0` +
+    `&show_description=0` +
+    `&video_only=0` +
+    `&auto_play=0`;
+  const narratedLink = `${base}` +
+    `?show_menu=0` +
+    `&is_interactive=0` +
+    `&show_left_sidebar=0` +
+    `&show_description=0` +
+    `&video_only=0` +
+    `&auto_play=0`;
 
   return (
     <div className="panel">
       <HeaderBar />
-      <h3>{data.video_title}</h3>
-
+      <h3>{data.video_title || "Animation Share Links"}</h3>
       <div className="card">
-        <p><strong>Unique ID:</strong> {data.unique_id}</p>
+        <p>
+          <strong>Unique ID:</strong> {data.unique_id}
+        </p>
         <h4>Interactive URL</h4>
         <input value={interactiveLink} readOnly />
         <h4>Narrated URL</h4>
         <input value={narratedLink} readOnly />
       </div>
-      
       <div className="viewer-box">
         <h4>Interactive Animation</h4>
         <iframe
           src={interactiveLink}
           width="100%"
           height="300"
-          onLoad={() => handleTrack("interactive")}
           allowFullScreen
+          onLoad={() => handleTrack("interactive", "Clutch(Interactive Animation)")}
         />
       </div>
       
       <div className="viewer-box">
         <h4>Narrated Animation</h4>
+        
         <iframe
           src={narratedLink}
           width="100%"
           height="300"
-          onLoad={() => handleTrack("narrated")}
           allowFullScreen
+          onLoad={() => handleTrack("narrated", "Clutch(Narrated Animation)")}
         />
       </div>
     </div>
-  );
-}
+    );
+  }
 
   if (animationUrl.type === "single") {
     const data = animationUrl.data;
@@ -391,8 +490,7 @@ if (animationUrl.type === "share") {
           src={data.url} 
           width="100%" 
           height="400"
-          onLoad={() => handleTrack("narrated")}
-          allowFullScreen
+          onLoad={() => handleTrack("interactive")}
           />
         )
       }
@@ -453,69 +551,75 @@ if (animationUrl.type === "share") {
   }
   
   if (animationUrl.type === "usage") {
-  //useEffect(() => {
-    //if (!animationUrl?.jobId) return;
-    //const fetchCounts = async () => {
-      //const counts = await getViewCount(animationUrl.jobId);
-      //setLiveCount(counts);};
-    //fetchCounts();
-    //const interval = setInterval(fetchCounts, 2000);
-    //return () => clearInterval(interval);
-  //}, [animationUrl?.jobId]);
   return (
     <div className="panel">
       <HeaderBar />
-      <h3>Animation Usage</h3>
+      <h3>Animation Link Usage</h3>
       <div className="card">
-        <h4>View Counts</h4>
-        <p><strong>Clutch Interactive:</strong> {liveCount.interactive}</p>
-        <p><strong>Clutch Narrated:</strong> {liveCount.narrated}</p>
+        <h4>Live View Count</h4>
+        <p>
+          <strong>Interactive:</strong>{" "}
+          {liveCount.interactive}
+        </p>
+        <p>
+          <strong>Narrated:</strong>{" "}
+          {liveCount.narrated}
+        </p>
       </div>
     </div>
   );
 }
+
   if (animationUrl.type === "viewed") {
-  const data = animationUrl.data || [];
+  const data = Array.isArray(animationUrl?.data)
+    ? animationUrl.data
+    : [];
   return (
     <div className="panel">
       <HeaderBar />
       <h3>Viewed Animations Report</h3>
       {data.length === 0 ? (
-        <p>No animations viewed for selected date</p>
-      ) : (
-        data.map((item, index) => (
-          <div
-            key={index}
-            className="card"
-            style={{
-              marginBottom: "20px",
-              padding: "15px"
-            }}
-          >
-            <h4>{item.animation_name || "Animation"}</h4>
-            <p>
-              <strong>Viewed Type:</strong>{" "}
-              {item.type}
-            </p>
-            <p>
-              <strong>Viewed Time:</strong>{" "}
-              {new Date(
-                item.track_date_time
-              ).toLocaleString()
-            }
-            </p>
-            <iframe
-              src={`https://dev.motovisuals.com/thirdpartyapi/#!/viewAnimation/${item.animation_id}?is_interactive=1`}
-              width="100%"
-              height="250"
-              //allowFullScreen
-            />
-          </div>
-        ))
+        <div className="card">
+          <p>No viewed animations found</p>
+        </div>
+      ):(
+        data.map((item, index) => {
+          const dateObj = new Date(
+            item.track_date_time
+          );
+          return (
+            <div
+              key={index}
+              className="card"
+              style={{
+                marginBottom: "15px",
+                padding: "15px"
+              }}
+            >
+              <p>
+                <strong>Animation:</strong>{" "}
+                {item.animation_name}
+              </p>
+              <p>
+                <strong>Type:</strong>{" "}
+                {item.type}
+              </p>
+              <p>
+                <strong>Date:</strong>{" "}
+                {dateObj.toLocaleDateString()}
+              </p>
+              <p>
+                <strong>Time:</strong>{" "}
+                {dateObj.toLocaleTimeString()}
+              </p>
+            </div>
+          );
+        })
       )}
     </div>
   );
 }
+
   if (animationUrl.type === "apiKey") {
   const response = animationUrl.data || {};
   return (
@@ -527,7 +631,6 @@ if (animationUrl.type === "share") {
           <strong>Status:</strong>{" "}
           {response.api_key ? "Success" : "Failed"}
         </p>
-
         <p>
           <strong>API Key:</strong>{" "}
           {response.api_key || "No API Key"}
