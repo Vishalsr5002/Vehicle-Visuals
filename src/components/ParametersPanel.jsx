@@ -39,29 +39,38 @@ export const ParametersPanel = ({
   };
 
   useEffect(() => {
-    if (selectedOption !== "search") return;
-    const timer = setTimeout(() => {
-      setDebouncedTerm(formData.term || "");
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [formData.term, selectedOption]);
+  if (selectedOption !== "search") return;
+  const searchValue = formData.term?.trim();
+  if (!searchValue) {
+    setAnimationUrl({
+      type: "search",
+      data: []
+    });
+    return;
+  }
+  const timer = setTimeout(() => {
+    setDebouncedTerm(searchValue);
+  }, 500);
+  return () => clearTimeout(timer);
+}, [formData.term, selectedOption]);
   
   useEffect(() => {
-    if (selectedOption === "search" && debouncedTerm.trim()) {
-      handleSearch();
+    if (selectedOption === "search" && debouncedTerm) {
+      handleSearch(debouncedTerm);
     }
   }, [debouncedTerm]);
   
-  const handleSearch = async () => {
+  const handleSearch = async (term) => {
     try {
       setLoading(true);
-      const results = await searchAnimations(debouncedTerm);
+      console.log("Searching the letter", term);
+      const results = await searchAnimations(term);
       setAnimationUrl({
         type: "search",
         data: results || []
       });
     } catch (err) {
-      console.error(err);
+      console.error("Search Error",err);
       setAnimationUrl({ type: "search", data: [] });
     } finally {
       setLoading(false);
@@ -146,7 +155,7 @@ export const ParametersPanel = ({
           msg: res?.message || "Update failed"
         });
       }
-
+      
       else if (selectedOption === "usage") {
         if (!formData.jobId) return alert("Job ID required");
         const res = await getAnimationLinkUsage(formData.jobId);
@@ -163,7 +172,8 @@ export const ParametersPanel = ({
           from_date: formData.from_date || formData.dateFrom,
           to_date: formData.to_date || formData.dateTo,
           unique_id: formData.uniqueId
-        });
+        }
+      );
       console.log("Viewed Animation Response", res);
         setAnimationUrl({
           type: "viewed",
@@ -207,9 +217,10 @@ export const ParametersPanel = ({
         setAnimationUrl({
           type: "apiKey",
           data: res.data
-        })
-        setApiKey(res?.data.apiKey || "");
-      }
+        }
+      )
+      setApiKey(res?.data.apiKey || "");
+    }
       else if (selectedOption === "links") {
         const partId = formData.partId;
         const roNumber = formData.roNumber;
@@ -257,7 +268,6 @@ export const ParametersPanel = ({
   return (
     <div className="search">
       <h3>API Parameters</h3>
-
       {selectedOption === "preference" && (
         <div className="form-group">
           <label>API Key *</label>
@@ -269,7 +279,7 @@ export const ParametersPanel = ({
           />
         </div>
       )}
-
+      
       {parameters.map((param) => (
         <div className="form-group" key={param.name}>
           <label>
@@ -292,16 +302,14 @@ export const ParametersPanel = ({
               ? handleGetUserPreferences
               : handleRun
           }
-          disabled={loading}
-        >
+          disabled={loading}>
           {loading ? "Processing..." : "Run API"}
         </button>
-      )}
-
+      )
+    }
       {status && (
         <div className={`update-status ${status.type}`}>
           {status.msg}
-
           {results.length > 0 && (
             <div className="getUsageReport-results">
               <pre>{JSON.stringify(results, null, 2)}</pre>
