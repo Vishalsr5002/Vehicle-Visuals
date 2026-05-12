@@ -3,12 +3,15 @@ import RealTimeClock from "./RealTimeClock";
 import { getVideoDetails } from "../services/api";
 import { FileText } from "lucide-react";
 import { trackAnimationView, getViewCount, getViewedReport } from "../services/api";
+import { Mail } from "lucide-react";
 
 const AnimationViewer = ({ animationUrl, goBack }) => {
   const [loading, setLoading] = useState(false);
   const [videoData, setVideoData] = useState(null);
   const [viewedData, setViewedData] = useState([]);
   const [selectedDate, setSelectedDate] = useState("");
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [emailForm, setEmailForm] = useState({ from: "", to: "", cc: "", subject: ""});
   const [tracked, setTracked] = useState({
     interactive: false,
     narrated: false
@@ -62,7 +65,6 @@ const AnimationViewer = ({ animationUrl, goBack }) => {
   if (animationUrl?.data) {
     setViewedData(animationUrl.data);
   }
-
 }, [animationUrl]);
   useEffect(() => {
   if (animationUrl?.type !== "share") return;
@@ -94,7 +96,7 @@ const AnimationViewer = ({ animationUrl, goBack }) => {
     loadVideo();
   }, [animationUrl]);
   
-const handleTrack = async (type, title = "") => {
+  const handleTrack = async (type, title = "") => {
   try {
     if (tracked[type]) return;
     const job_id =
@@ -129,8 +131,8 @@ const handleTrack = async (type, title = "") => {
         animationUrl?.normal ||
         "";
     }
-
-    console.log("TRACKING:", {
+    
+    console.log("Tracking:", {
       job_id,
       animation_name,
       animation_id,
@@ -151,7 +153,7 @@ const handleTrack = async (type, title = "") => {
       [type]: true
     }));
   } catch (err) {
-    console.error("TRACK ERROR:", err);
+    console.error("Track Error:", err);
   }
 };
   const handleGeneratePDF = async () => {
@@ -191,7 +193,124 @@ const handleTrack = async (type, title = "") => {
       alert("Something went wrong");
     }
   };
-  
+  const handleSendEmail = async () => {
+  try {
+    const partId =
+      animationUrl?.data?.part_id ||
+      animationUrl?.partId ||
+      "7011";
+    const animationLink =
+      `https://dev.motovisuals.com/thirdpartyapi/#!/viewAnimation/${partId}` +
+      `?show_menu=0` +
+      `&is_interactive=1` +
+      `&show_left_sidebar=0` +
+      `&show_description=0` +
+      `&video_only=0` +
+      `&auto_play=0` +
+      `&lang=en_US`;
+    console.log("EMAIL LINK:", animationLink);
+    const response = await fetch(
+      "http://localhost:5000/api/send-animation-email",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          ...emailForm,
+          animationLink
+        })
+      }
+    );
+    const data = await response.json();
+    if (data.success) {
+      alert("Email Sent Successfully");
+      setShowEmailModal(false);
+    } else {
+      alert("Email Failed");
+    }
+  } catch (err) {
+    console.error(err);
+    alert("Something went wrong");
+  }
+};
+  const EmailModal = () => (
+  showEmailModal && (
+    <div className="email-modal-overlay">
+      <div className="email-modal">
+        <h2>Email Animation</h2>
+
+        <input
+          type="email"
+          placeholder="From"
+          value={emailForm.from}
+          onChange={(e) =>
+            setEmailForm({
+              ...emailForm,
+              from: e.target.value
+            })
+          }
+        />
+
+        <input
+          type="email"
+          placeholder="To"
+          value={emailForm.to}
+          onChange={(e) =>
+            setEmailForm({
+              ...emailForm,
+              to: e.target.value
+            })
+          }
+        />
+
+        <input
+          type="text"
+          placeholder="CC"
+          value={emailForm.cc}
+          onChange={(e) =>
+            setEmailForm({
+              ...emailForm,
+              cc: e.target.value
+            })
+          }
+        />
+
+        <input
+          type="text"
+          placeholder="Subject"
+          value={emailForm.subject}
+          onChange={(e) =>
+            setEmailForm({
+              ...emailForm,
+              subject: e.target.value
+            })
+          }
+        />
+        <textarea
+          rows="5"
+          readOnly
+          value={
+            animationUrl?.interactive ||
+            animationUrl?.data?.url ||
+            animationUrl?.normal ||
+            ""
+          }
+        />
+        <div className="email-actions">
+          <button onClick={handleSendEmail}>
+            Send
+          </button>
+          <button
+            onClick={() => setShowEmailModal(false)}
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+);
   const HeaderBar = () => (
     <div
       style={{
@@ -218,6 +337,12 @@ const handleTrack = async (type, title = "") => {
         onClick={handleGeneratePDF}
         title="Generate PDF"
       />
+      <Mail
+        size={24}
+        style={{ cursor: "pointer", marginleft: "15px" }}
+        onClick={() =>setShowEmailModal(true)}
+        title="Send Email"
+        />
     </div>
   );
   
@@ -255,74 +380,74 @@ const handleTrack = async (type, title = "") => {
   );
 }
 
-  if (animationUrl.type === "search") {
-  const data = animationUrl.data || [];
-  if (data.length === 0) {
-    return (
-      <div className="panel">
-        <HeaderBar />
-        <h3>No Animations Found</h3>
-      </div>
-    );
-  }
-  return (
-    <div className="panel">
-      <HeaderBar />
-      <h3>Animation Preview</h3>
-      {data.map((item, index) => {
-        const partId =
-          item.part_id ||
-          item.partId ||
-          "7011";
-        const interactiveLink = `https://dev.motovisuals.com/thirdpartyapi/#!/viewAnimation/${partId}` +
-          `?is_interactive=1`;
-        const narratedLink = `https://dev.motovisuals.com/thirdpartyapi/#!/viewAnimation/${partId}` +
-          `?is_interactive=0`;
-        return (
-          <div
-            key={index}
-            className="card"
-            style={{ marginBottom: "20px" }}
-          >
-            <h3>
-              {item.animation_name ||
-                item.title ||
-                "Animation"}
-            </h3>
-            <div className="viewer-box">
-              <h4>Interactive</h4>
-              <iframe
-                src={interactiveLink}
-                width="100%"
-                height="400"
-                onLoad={() =>
-                  handleTrack(
-                    "interactive",
-                    `${item.animation_name || "Animation"} (Interactive Animation)`
-                  )
-                }
-              />
-            </div>
-            <div className="viewer-box">
-              <h4>Narrated</h4>
-              <iframe
-                src={narratedLink}
-                width="100%"
-                height="400"
-                onLoad={() =>
-                  handleTrack(
-                    "narrated",
-                    `${item.animation_name || "Animation"} (Narrated Animation)`
-                  )
-                }
-              />
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
+//   if (animationUrl.type === "search") {
+//   const data = animationUrl.data || [];
+//   if (data.length === 0) {
+//     return (
+//       <div className="panel">
+//         <HeaderBar />
+//         <h3>No Animations Found</h3>
+//       </div>
+//     );
+//   }
+//   return (
+//     <div className="panel">
+//       <HeaderBar />
+//       <h3>Animation Preview</h3>
+//       {data.map((item, index) => {
+//         const partId =
+//           item.part_id ||
+//           item.partId ||
+//           "7011";
+//         const interactiveLink = `https://dev.motovisuals.com/thirdpartyapi/#!/viewAnimation/${partId}` +
+//           `?is_interactive=1`;
+//         const narratedLink = `https://dev.motovisuals.com/thirdpartyapi/#!/viewAnimation/${partId}` +
+//           `?is_interactive=0`;
+//         return (
+//           <div
+//             key={index}
+//             className="card"
+//             style={{ marginBottom: "20px" }}
+//           >
+//             <h3>
+//               {item.animation_name ||
+//                 item.title ||
+//                 "Animation"}
+//             </h3>
+//             <div className="viewer-box">
+//               <h4>Interactive</h4>
+//               <iframe
+//                 src={interactiveLink}
+//                 width="100%"
+//                 height="400"
+//                 onLoad={() =>
+//                   handleTrack(
+//                     "interactive",
+//                     `${item.animation_name || "Animation"} (Interactive Animation)`
+//                   )
+//                 }
+//               />
+//             </div>
+//             <div className="viewer-box">
+//               <h4>Narrated</h4>
+//               <iframe
+//                 src={narratedLink}
+//                 width="100%"
+//                 height="400"
+//                 onLoad={() =>
+//                   handleTrack(
+//                     "narrated",
+//                     `${item.animation_name || "Animation"} (Narrated Animation)`
+//                   )
+//                 }
+//               />
+//             </div>
+//           </div>
+//         );
+//       })}
+//     </div>
+//   );
+// }
 
   if (animationUrl?.type === "emailLink") {
   const data = animationUrl || {};
@@ -361,7 +486,7 @@ const handleTrack = async (type, title = "") => {
             <button>Open</button>
           </a>
         </div>
-
+        
         <iframe
           src={data.interactive}
           width="100%"
@@ -478,6 +603,7 @@ if (animationUrl.type === "share") {
     return (
       <div className="panel" style={{ textAlign: "center" }}>
         <HeaderBar />
+        <EmailModal />
         <h3>{data.title}</h3>
         {videoData?.videoUrl ? (
           <video width="100%" height="400" controls autoPlay>
@@ -503,6 +629,7 @@ if (animationUrl.type === "share") {
     return (
       <div className="panel" style={{ textAlign: "center" }}>
         <HeaderBar />
+        <EmailModal />
         <h3>Looped Animation</h3>
         <a href={animationUrl.url} target="_blank" rel="noreferrer">
           {animationUrl.url}
@@ -524,6 +651,7 @@ if (animationUrl.type === "share") {
       <div>
         <HeaderBar />
         <RealTimeClock />
+        <EmailModal />
         <div className="dual-view">
           <div className="viewer-box">
             <h4>Interactive</h4>
@@ -648,7 +776,8 @@ if (animationUrl.type === "share") {
       </div>
     </div>
   );
-}
+} 
+     
   return <p>Unsupported</p>;
 };
 
