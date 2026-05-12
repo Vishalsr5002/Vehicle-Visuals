@@ -1,21 +1,32 @@
+import dotenv from "dotenv";
+dotenv.config();
 import express from "express";
 import cors from "cors";
 import pdfRoutes from "./routes/pdf.js";
 import userRoutes from "./routes/user.js";
-import trackRoutes from "./routes/track.js"; 
+import trackRoutes from "./routes/track.js";
+import emailRoutes from "./routes/emailRoutes.js";
 const app = express();
 const PORT = 5000;
-app.use(cors({
-  origin: "http://localhost:5173"
-}));
+console.log("Email Users", process.env.EMAIL_USER);
+console.log("Email Pass", process.env.EMAIL_PASS);
+app.use(
+  cors({
+    origin: "http://localhost:5173"
+  })
+);
 app.use(express.json());
-// Routes
 app.use("/api", pdfRoutes);
 app.use("/api", userRoutes);
-app.use("/api", trackRoutes); 
+app.use("/api", trackRoutes);
+app.use("/api", emailRoutes);
 app.get("/", (req, res) => {
   res.send("Server is working");
 });
+console.log("Track Routes Loaded");
+console.log("Email Routes Loaded");
 app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(
+    `Server running on http://localhost:${PORT}`
+  );
 });
