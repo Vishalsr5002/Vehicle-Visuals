@@ -6,6 +6,8 @@ import pdfRoutes from "./routes/pdf.js";
 import userRoutes from "./routes/user.js";
 import trackRoutes from "./routes/track.js";
 import emailRoutes from "./routes/emailRoutes.js";
+//import shareLinks from "./shareLinks.js";
+import { getShareLink } from "./utils/shareStorage.js";
 const app = express();
 const PORT = 5000;
 console.log("Email Users", process.env.EMAIL_USER);
@@ -25,6 +27,17 @@ app.get("/", (req, res) => {
 });
 console.log("Track Routes Loaded");
 console.log("Email Routes Loaded");
+app.get("/share/:id", (req, res) => {
+const shortId = req.params.id;
+console.log("Short ID:", shortId);
+//console.log("Available Link:", shareLinks);
+const originalLink = getShareLink(shortId);
+if (!originalLink) {
+    return res.status(404).send("Invalid Share Link");
+  }
+  console.log("Redirecting to:", originalLink);
+  res.redirect(302, originalLink);
+});
 app.listen(PORT, () => {
   console.log(
     `Server running on http://localhost:${PORT}`
