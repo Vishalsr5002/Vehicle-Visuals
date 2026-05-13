@@ -5,7 +5,7 @@ const normalizeSearchData = (data) => {
   if (!data || typeof data !== "object") return [];
   return Object.values(data).map((item) => ({
     part_id: item.part_id,
-    title: item.title || item.name || "No Title",
+    title: item.en_US || item.title || item.name || "No Title",
     image:
       item.image ||
       item.image_url ||
@@ -58,6 +58,7 @@ export const getUserDetails = async (username, password) => {
     console.log("Calling User Details API:", url);
     const res = await fetch(url);
     const data = await res.json();
+    //setLoading(false);
     return data;
   } catch (error) {
     console.error("User Details API error:", error);
@@ -68,34 +69,96 @@ export const getUserDetails = async (username, password) => {
   }
 };
 
-export const trackAnimationView = async (unique_id, type, animation_name, animation_id, video_url) => {
+export const trackAnimationView = async (
+  unique_id,
+  animation_name,
+  type,
+  animation_id,
+  video_url
+) => {
+  console.log("TRACK FUNCTION CALLED");
+  console.log({
+    unique_id,
+    animation_name,
+    type,
+    animation_id,
+    video_url
+  });
+
   try {
-    await fetch("http://localhost:5000/api/track-view", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        job_id: unique_id,
-        //part_id: unique_id,
-        //api_key: unique_id,
-        type,
-        animation_name,
-        animation_id,
-        video_url
-      })
-    });
+
+    const response = await fetch(
+      "http://localhost:5000/api/track-view",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          job_id: unique_id,
+          animation_name,
+          type,
+          animation_id,
+          video_url
+        })
+      }
+    );
+    const data = await response.json();
+    console.log("TRACK API RESPONSE:", data);
   } catch (err) {
     console.error("Tracking error:", err);
   }
 };
 
-export const getViewCount = async (unique_id) => {
-  const res = await fetch(
-    `http://localhost:5000/api/view-count/${unique_id}`
-  );
-  const data = await res.json();
-  return data;
+export const getViewCount = async (id = "all") => {
+  try {
+    const res = await fetch(
+      `http://localhost:5000/api/view-count/${id}`
+    );
+    const data = await res.json();
+    console.log("VIEW COUNT:", data);
+    return data.data;
+  } catch (err) {
+    console.error("VIEW COUNT ERROR:", err);
+    return {
+      status : false,
+      data :{
+      interactive: 0,
+      narrated: 0
+      }
+    };
+  }
+};
+
+export const getViewedReport = async (
+  fromDate,
+  toDate
+) => {
+  try {
+    const url = `http://localhost:5000/api/viewed-animations` +
+      `?from_date=${fromDate}` +
+      `&to_date=${toDate}`;
+    console.log(
+      "Viewed Animations API:",
+      url
+    );
+    const response = await fetch(url);
+    const data = await response.json();
+    console.log(
+      "Viewed Animations Response:",
+      data
+    );
+    return data;
+  } catch (err) {
+    console.error(
+      "Viewed Report Error:",
+      err
+    );
+    return {
+      status: false,
+      data: []
+    };
+  }
 };
 
 export const getApiKey = async (username, password) => {
@@ -129,9 +192,7 @@ export const getDynamicLink = async ({
     if (!result?.status) {
       return result;
     }
-
     return result;
-
   } catch (error) {
     console.error("Dynamic Link Error:", error);
     return {
@@ -210,34 +271,25 @@ export const getAnimationLinkUsage = async (jobId) => {
 };
 export const getAnimationUrls = (partId) => {
   if (!partId) return null;
-  const base = "https://dev.motovisuals.com/api/animation_link/view/interactive_animation.php";
-  const params = {
-    login: "motovisuals",
-    password: "motovisuals",
-    api_key: API_KEY,
-    part_id: partId,
-    show_menu: 0,
-    show_left_sidebar: 0,
-    video_only: 0,
-    auto_play: 1
-  };
-
+  const base = `https://dev.motovisuals.com/thirdpartyapi/#!/viewAnimation/${partId}`;
   return {
     type: "dual",
     interactive:
-      base +
-      "?" +
-      new URLSearchParams({
-        ...params,
-        is_interactive: 1
-      }),
+      `${base}` +
+      `?show_menu=0` +
+      `&is_interactive=1` +
+      `&show_left_sidebar=0` +
+      `&show_description=0` +
+      `&video_only=0` +
+      `&auto_play=0`,
     normal:
-      base +
-      "?" +
-      new URLSearchParams({
-        ...params,
-        is_interactive: 0
-      })
+      `${base}` +
+      `?show_menu=0` +
+      `&is_interactive=0` +
+      `&show_left_sidebar=0` +
+      `&show_description=0` +
+      `&video_only=0` +
+      `&auto_play=0`
   };
 };
 export const generateViewerLinks = (partId) => {
@@ -284,6 +336,30 @@ export const getAnimationShareLink = async (partId) => {
   } catch (err) {
     console.error("Share Link error:", err);
     return null;
+  }
+};
+
+export const generateShortShareLink = async (animationLink) => {
+  try {
+    const response = await fetch(
+      "http://localhost:5000/api/generate-share-link",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          animationLink
+        })
+      }
+    );
+    const data = await response.json();
+    return data;
+  } catch (err) {
+    console.error("Short Link Error:", err);
+    return {
+      success: false
+    };
   }
 };
 
@@ -443,3 +519,28 @@ export const generateLoopedAnimationLink = async ({
     return { status: false };
   }
 };
+// export const generateShortShareLink = async (
+//   animationLink
+// ) => {
+//   try {
+//     const response = await fetch(
+//       "http://localhost:5000/api/generate-share-link",
+//       {
+//         method: "POST",
+//         headers: {
+//           "Content-Type": "application/json"
+//         },
+//         body: JSON.stringify({
+//           animationLink
+//         })
+//       }
+//     );
+//     return await response.json();
+//   } catch (err) {
+//     console.error("Short Link Error:",err);
+
+//     return {
+//       success: false
+//     };
+//   }
+// };
