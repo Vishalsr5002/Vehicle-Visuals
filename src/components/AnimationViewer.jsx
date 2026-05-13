@@ -2,23 +2,111 @@ import { useEffect, useState } from "react";
 import RealTimeClock from "./RealTimeClock";
 import { getVideoDetails } from "../services/api";
 import { FileText } from "lucide-react";
-import { trackAnimationView, getViewCount, getViewedReport } from "../services/api";
+import { trackAnimationView, getViewCount, getViewedReport, generateShortShareLink } from "../services/api";
 import { Mail } from "lucide-react";
 
+const EmailModal = ({
+  showEmailModal,
+  setShowEmailModal,
+  emailForm,
+  setEmailForm,
+  handleSendEmail,
+  interactiveLink,
+  narratedLink,
+  generatedShortLink
+}) => {
+  if (!showEmailModal) return null;
+  return (
+    <div className="email-modal-overlay">
+      <div className="email-modal">
+        <h2>Email Animation</h2>
+        <input
+          type="email"
+          placeholder="From"
+          value={emailForm.from}
+          onChange={(e) =>
+            setEmailForm({
+              ...emailForm,
+              from: e.target.value
+            })
+          }
+        />
+        <input
+          type="email"
+          placeholder="To"
+          value={emailForm.to}
+          onChange={(e) =>
+            setEmailForm({
+              ...emailForm,
+              to: e.target.value
+            })
+          }
+        />
+        <input
+          type="text"
+          placeholder="CC"
+          value={emailForm.cc}
+          onChange={(e) =>
+            setEmailForm({
+              ...emailForm,
+              cc: e.target.value
+            })
+          }
+        />
+        <input
+          type="text"
+          placeholder="Subject"
+          value={emailForm.subject}
+          onChange={(e) =>
+            setEmailForm({
+              ...emailForm,
+              subject: e.target.value
+            })
+          }
+        />
+
+        <label>Animation Link</label>
+        <textarea
+          rows = "4"
+          readOnly
+          value ={generatedShortLink}
+          />
+        <div className="email-actions">
+          <button
+           onClick={() => handleSendEmail(
+            emailForm.animationType === "interactive"
+            ?interactiveLink
+            :narratedLink
+           )}
+           > Send </button>
+          <button
+            onClick={() =>
+              setShowEmailModal(false)
+            }
+          >
+            Cancel
+          </button>
+
+        </div>
+      </div>
+    </div>
+  );
+};
 const AnimationViewer = ({ animationUrl, goBack }) => {
   const [loading, setLoading] = useState(false);
   const [videoData, setVideoData] = useState(null);
   const [viewedData, setViewedData] = useState([]);
   const [selectedDate, setSelectedDate] = useState("");
   const [showEmailModal, setShowEmailModal] = useState(false);
-  const [emailForm, setEmailForm] = useState({ from: "", to: "", cc: "", subject: ""});
+  const [emailForm, setEmailForm] = useState({ from: "", to: "", cc: "", subject: "", animationType: "interactive"});
+  const [generatedShortLink, setGeneratedShortLink] = useState("");
   const [tracked, setTracked] = useState({
     interactive: false,
     narrated: false
   }
 )
   const [viewCount, setViewCount] = useState({
-    interactive: 0, 
+    interactive: 0,
     narrated: 0
   }
 );
@@ -27,25 +115,36 @@ const AnimationViewer = ({ animationUrl, goBack }) => {
     narrated: 0
   }
 );
+  const interactiveLink = animationUrl?.interactive || animationUrl?.data?.interactive || animationUrl?.shortInteractive || animationUrl?.data?.url || "";
+  const narratedLink = animationUrl?.narrated || animationUrl?.data?.narrated || animationUrl?.shortNarrated || animationUrl?.data?.url || "";
+// const partId = animationUrl?.data?.part_id || animationUrl?.partId || "7011";
+// const interactiveLink =
+//   `https://dev.motovisuals.com/thirdpartyapi/#!/viewAnimation/${partId}` +
+//   `?show_menu=0` +
+//   `&is_interactive=1` +
+//   `&show_left_sidebar=0` +
+//   `&show_description=0` +
+//   `&video_only=0`;
+// const narratedLink =
+//   `https://dev.motovisuals.com/thirdpartyapi/#!/viewAnimation/${partId}` +
+//   `?show_menu=0` +
+//   `&is_interactive=0` +
+//   `&show_left_sidebar=0` +
+//   `&show_description=0` +
+//   `&video_only=0`;
   useEffect(() => {
   if (animationUrl?.type !== "usage") return;
   const fetchCounts = async () => {
     try {
       const id = animationUrl?.jobId || animationUrl?.partId || "7011";
       const response = await getViewCount(id);
-      console.log(
-        "VIEW COUNT RESPONSE:",
-        response
-      );
+      console.log("View Count Response:",response);
       setLiveCount({
         interactive: response?.interactive || 0,
         narrated: response?.narrated || 0
       });
     } catch (err) {
-      console.error(
-        "COUNT ERROR:",
-        err
-      );
+      console.error("Count Error:", err);
     }
   };
   fetchCounts();
@@ -139,7 +238,7 @@ const AnimationViewer = ({ animationUrl, goBack }) => {
       type,
       video_url
     });
-
+    
     await trackAnimationView(
       job_id,
       animation_name,
@@ -193,22 +292,46 @@ const AnimationViewer = ({ animationUrl, goBack }) => {
       alert("Something went wrong");
     }
   };
-  const handleSendEmail = async () => {
+//   const generateShortLink = async (
+//     originalLink
+//   ) => {
+//   try {
+//     const response = await fetch(
+//       "http://localhost:5000/api/generate-share-link",
+//       {
+//         method: "POST",
+//         headers: {
+//           "Content-Type":
+//             "application/json"
+//         },
+//         body: JSON.stringify({
+//           animationLink: originalLink
+//         })
+//       }
+//     );
+//     const data = await response.json();
+//     console.log("SHORT LINK DATA:",data);
+//     if (data.success) {
+//       setGeneratedShortLink(
+//         data.shortUrl
+//       );
+//     } else {
+//       alert("Short URL generation failed");
+//     }
+
+//   } catch (err) {
+//     console.error("SHORT LINK ERROR:", err);
+//   }
+// };
+    const handleSendEmail = async (animationLink) => {
   try {
-    const partId =
-      animationUrl?.data?.part_id ||
-      animationUrl?.partId ||
-      "7011";
-    const animationLink =
-      `https://dev.motovisuals.com/thirdpartyapi/#!/viewAnimation/${partId}` +
-      `?show_menu=0` +
-      `&is_interactive=1` +
-      `&show_left_sidebar=0` +
-      `&show_description=0` +
-      `&video_only=0` +
-      `&auto_play=0` +
-      `&lang=en_US`;
-    console.log("EMAIL LINK:", animationLink);
+    const shortLinkResponse = await generateShortShareLink(animationLink);
+    if (!shortLinkResponse.success) {
+      alert("Short URL generation failed");
+      return;
+    }
+    const shortUrl = shortLinkResponse.shortUrl;
+    console.log("Generated Short URL:", shortUrl);
     const response = await fetch(
       "http://localhost:5000/api/send-animation-email",
       {
@@ -218,7 +341,7 @@ const AnimationViewer = ({ animationUrl, goBack }) => {
         },
         body: JSON.stringify({
           ...emailForm,
-          animationLink
+          animationLink: shortUrl
         })
       }
     );
@@ -234,83 +357,6 @@ const AnimationViewer = ({ animationUrl, goBack }) => {
     alert("Something went wrong");
   }
 };
-  const EmailModal = () => (
-  showEmailModal && (
-    <div className="email-modal-overlay">
-      <div className="email-modal">
-        <h2>Email Animation</h2>
-
-        <input
-          type="email"
-          placeholder="From"
-          value={emailForm.from}
-          onChange={(e) =>
-            setEmailForm({
-              ...emailForm,
-              from: e.target.value
-            })
-          }
-        />
-
-        <input
-          type="email"
-          placeholder="To"
-          value={emailForm.to}
-          onChange={(e) =>
-            setEmailForm({
-              ...emailForm,
-              to: e.target.value
-            })
-          }
-        />
-
-        <input
-          type="text"
-          placeholder="CC"
-          value={emailForm.cc}
-          onChange={(e) =>
-            setEmailForm({
-              ...emailForm,
-              cc: e.target.value
-            })
-          }
-        />
-
-        <input
-          type="text"
-          placeholder="Subject"
-          value={emailForm.subject}
-          onChange={(e) =>
-            setEmailForm({
-              ...emailForm,
-              subject: e.target.value
-            })
-          }
-        />
-        <textarea
-          rows="5"
-          readOnly
-          value={
-            animationUrl?.interactive ||
-            animationUrl?.data?.url ||
-            animationUrl?.normal ||
-            ""
-          }
-        />
-        <div className="email-actions">
-          <button onClick={handleSendEmail}>
-            Send
-          </button>
-          <button
-            onClick={() => setShowEmailModal(false)}
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-);
   const HeaderBar = () => (
     <div
       style={{
@@ -339,11 +385,40 @@ const AnimationViewer = ({ animationUrl, goBack }) => {
       />
       <Mail
         size={24}
-        style={{ cursor: "pointer", marginleft: "15px" }}
-        onClick={() =>setShowEmailModal(true)}
+        style={{ cursor: "pointer", marginLeft: "15px" }}
+        onClick={async () => {
+          setShowEmailModal(true);
+          const selectedLink = emailForm.animationType === "interactive"
+      ? interactiveLink
+      : narratedLink;
+
+  const shortLinkResponse =
+    await generateShortShareLink(
+      selectedLink
+    );
+  if (shortLinkResponse.success) {
+    setGeneratedShortLink(
+      shortLinkResponse.shortUrl
+    );
+  } else {
+    alert("Short URL generation failed");
+  }
+}}
         title="Send Email"
         />
     </div>
+  );
+   const GlobalEmailModal = (
+    <EmailModal
+      showEmailModal={showEmailModal}
+      setShowEmailModal={setShowEmailModal}
+      emailForm={emailForm}
+      setEmailForm={setEmailForm}
+      handleSendEmail={handleSendEmail}
+      interactiveLink={interactiveLink}
+      narratedLink={narratedLink}
+      generatedShortLink={generatedShortLink}
+    />
   );
   
   if (!animationUrl) {
@@ -454,6 +529,7 @@ const AnimationViewer = ({ animationUrl, goBack }) => {
   return (
     <div className="panel">
       <HeaderBar />
+      {GlobalEmailModal}
       <h3>Generated Animation Links</h3>
       <div className="viewer-box">
         <h4>Clutch (Interactive Animation)</h4>
@@ -503,7 +579,7 @@ const AnimationViewer = ({ animationUrl, goBack }) => {
           value={data.shortNarrated || ""}
           readOnly
         />
-
+        
         <div
           style={{
             display: "flex",
@@ -543,25 +619,26 @@ if (animationUrl.type === "share") {
   if (!data?.unique_id) {
     return <p>Invalid Share Data</p>;
   }
-  const base = `https://dev.motovisuals.com/thirdpartyapi/#!/viewAnimation/${data.part_id || "7011"}`;
-  const interactiveLink = `${base}` +
-    `?show_menu=0` +
-    `&is_interactive=1` +
-    `&show_left_sidebar=0` +
-    `&show_description=0` +
-    `&video_only=0` +
-    `&auto_play=0`;
-  const narratedLink = `${base}` +
-    `?show_menu=0` +
-    `&is_interactive=0` +
-    `&show_left_sidebar=0` +
-    `&show_description=0` +
-    `&video_only=0` +
-    `&auto_play=0`;
+  // const base = `https://dev.motovisuals.com/thirdpartyapi/#!/viewAnimation/${data.part_id || "7011"}`;
+  // const interactiveLink = `${base}` +
+  //   `?show_menu=0` +
+  //   `&is_interactive=1` +
+  //   `&show_left_sidebar=0` +
+  //   `&show_description=0` +
+  //   `&video_only=0` +
+  //   `&auto_play=0`;
+  // const narratedLink = `${base}` +
+  //   `?show_menu=0` +
+  //   `&is_interactive=0` +
+  //   `&show_left_sidebar=0` +
+  //   `&show_description=0` +
+  //   `&video_only=0` +
+  //   `&auto_play=0`;
 
   return (
     <div className="panel">
       <HeaderBar />
+      {GlobalEmailModal}
       <h3>{data.video_title || "Animation Share Links"}</h3>
       <div className="card">
         <p>
@@ -603,7 +680,7 @@ if (animationUrl.type === "share") {
     return (
       <div className="panel" style={{ textAlign: "center" }}>
         <HeaderBar />
-        <EmailModal />
+        {GlobalEmailModal}
         <h3>{data.title}</h3>
         {videoData?.videoUrl ? (
           <video width="100%" height="400" controls autoPlay>
@@ -629,7 +706,7 @@ if (animationUrl.type === "share") {
     return (
       <div className="panel" style={{ textAlign: "center" }}>
         <HeaderBar />
-        <EmailModal />
+        {GlobalEmailModal}
         <h3>Looped Animation</h3>
         <a href={animationUrl.url} target="_blank" rel="noreferrer">
           {animationUrl.url}
@@ -651,7 +728,7 @@ if (animationUrl.type === "share") {
       <div>
         <HeaderBar />
         <RealTimeClock />
-        <EmailModal />
+        {GlobalEmailModal}
         <div className="dual-view">
           <div className="viewer-box">
             <h4>Interactive</h4>
@@ -682,6 +759,7 @@ if (animationUrl.type === "share") {
   return (
     <div className="panel">
       <HeaderBar />
+      {GlobalEmailModal}
       <h3>Animation Link Usage</h3>
       <div className="card">
         <h4>Live View Count</h4>
@@ -705,6 +783,7 @@ if (animationUrl.type === "share") {
   return (
     <div className="panel">
       <HeaderBar />
+      {GlobalEmailModal}
       <h3>Viewed Animations Report</h3>
       {data.length === 0 ? (
         <div className="card">
@@ -753,6 +832,7 @@ if (animationUrl.type === "share") {
   return (
     <div className="panel">
       <HeaderBar />
+      {GlobalEmailModal}
       <h3>API Key</h3>
       <div className="card">
         <p>
@@ -777,7 +857,7 @@ if (animationUrl.type === "share") {
     </div>
   );
 } 
-     
+
   return <p>Unsupported</p>;
 };
 
