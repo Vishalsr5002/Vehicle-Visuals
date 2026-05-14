@@ -4,12 +4,14 @@ import { searchAnimations } from "../services/api";
 import { getAnimationShareLink } from "../services/api";
 import { updateAnimationLink } from "../services/api";  
 import { getAnimationLinkUsage } from "../services/api";
+import { useCallback } from "react";
 import {
   //getUsageReport,
   getViewedAnimations,
   getUserDetails,
   getApiKey,
-  getDynamicLink
+  getDynamicLink,
+  getDisplayAnimation
 } from "../services/api";
 
 export const ParametersPanel = ({
@@ -25,6 +27,7 @@ export const ParametersPanel = ({
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState(null);
   const [results, setResults] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
   useEffect(() => {
     setFormData({});
     setStatus(null);
@@ -53,29 +56,34 @@ export const ParametersPanel = ({
   }, 500);
   return () => clearTimeout(timer);
 }, [formData.term, selectedOption]);
+
+  // useEffect(() => {
+  //   if(selectedOption !== "search") return;
+  //   if(!debouncedTerm.trim()) return;
+  //   //const delay = setTimeout(() =>{
+  //   //console.log("End Point", debouncedTerm);
+  //   //handleSearch(debouncedTerm);
+  //   //}, 800);
+  //   //return () => clearTimeout(delay);
+  // //}, [debouncedTerm]);
   
-  useEffect(() => {
-    if (selectedOption === "search" && debouncedTerm) {
-      handleSearch(debouncedTerm);
-    }
-  }, [debouncedTerm]);
-  
-  const handleSearch = async (term) => {
-    try {
-      setLoading(true);
-      console.log("Searching the letter", term);
-      const results = await searchAnimations(term);
-      setAnimationUrl({
-        type: "search",
-        data: results || []
-      });
-    } catch (err) {
-      console.error("Search Error",err);
-      setAnimationUrl({ type: "search", data: [] });
-    } finally {
-      setLoading(false);
-    }
-  };
+  // const handleSearch = useCallback(async (searchTerm) => {
+  //   try {
+  //     setSearchLoading(true);
+  //     console.log("Searching the letter", searchTerm);
+  //     const results = await searchAnimations(searchTerm);
+  //     const filteredResults = results.filter(
+  //       (item) => 
+  //         item && item.part_id && (item.title || item.en_US)
+  //     );
+  //     data:filteredResults;
+  //   } catch (err) {
+  //     console.error("Search Error",err);
+  //     setAnimationUrl({ type: "search", data: [] });
+  //   } finally {
+  //     setSearchLoading(false);
+  //   }
+  // });
   
   const buildAnimationLinks = (partId) => {
     const base = `https://motovisuals.com/thirdpartyapi/#!/viewAnimation/${partId}?show_menu=0&show_left_sidebar=0&show_description=0&video_only=0&auto_play=0`;
@@ -91,8 +99,8 @@ export const ParametersPanel = ({
     //return { username, password };
     // };
     
-  const handleRun = async () => {
-    if (!selectedOption) return;
+    const handleRun = async () => {
+      if (!selectedOption) return;
     setLoading(true);
     setStatus(null);
     setResults([]);
@@ -127,7 +135,6 @@ export const ParametersPanel = ({
           }
         });
       }
-      
       else if (selectedOption === "generateLoop") {
         const { login, password, mute } = formData;
         if (!login || !password) {
@@ -138,9 +145,43 @@ export const ParametersPanel = ({
         setAnimationUrl({
           type: "generateLoop",
           url: loopUrl
+        }
+      );
+    }
+      else if (selectedOption === "display") {
+        const {login,password,partId,apiKey,lang,is_interactive} = formData;
+        if ( !login || !password || !partId || !apiKey) {
+          return alert("Fill all required fields");
+        }
+        const res = await getDisplayAnimation({
+          login, password,
+          partId, apiKey, lang, is_interactive
         });
-      }
-      
+        console.log("DISPLAY RESPONSE:", res);
+        const base = `https://dev.motovisuals.com/thirdpartyapi/#!/viewAnimation/${partId}` +
+    `?show_menu=0` +
+    `&show_left_sidebar=0` +
+    `&show_description=0` +
+    `&video_only=0` +
+    `&auto_play=0`;
+    const mode =
+    is_interactive === "1"
+      ? "interactive"
+      : "narrated";
+  const animationUrl = `${base}&is_interactive=${is_interactive}`;
+  setAnimationUrl({
+    type: "display",
+    mode,
+    data: {
+      title:
+        mode === "interactive"
+          ? "Interactive Animation"
+          : "Narrated Animation",
+      url: animationUrl,
+      partId: partId
+    }
+  });
+}
       else if (selectedOption === "update") {
         const res = await updateAnimationLink({
           unique_id: formData.uniqueId,
@@ -203,9 +244,14 @@ export const ParametersPanel = ({
       else if (selectedOption === "get") {
         const username = formData.username;
         const password = formData.password;
+        const moduleName = formData.moduleName;
+        const methodName = formData.methodName;
         if (!username || !password) {
           return alert("Username & Password required");
         }
+        //if(!moduleName || ! methodName){
+          //return alert("Fill the Required Fields")
+        //}
         const res = await getApiKey(username, password);
         if (!res?.status) {
           setStatus({
@@ -263,6 +309,7 @@ export const ParametersPanel = ({
       setLoading(false);
     }
     console.log("Selected Option:", selectedOption);
+    //console.log("Parameters",apiParameters);
   };
   const parameters = apiParameters[selectedOption] || [];
   return (
@@ -278,22 +325,27 @@ export const ParametersPanel = ({
             placeholder="Enter API Key"
           />
         </div>
-      )}
-      
-      {parameters.map((param) => (
-        <div className="form-group" key={param.name}>
-          <label>
-            {param.label} {param.required && "*"}
-          </label>
-          <input
-            type="text"
-            name={param.name}
-            value={formData[param.name] || ""}
-            onChange={handleChange}
-          />
-        </div>
-      ))}
-
+      )
+    }
+      {parameters .filter( (param) => !(
+        selectedOption === "search" &&
+        param.name === "term"
+      )
+    )
+    .map((param) => (
+    <div className="form-group" key={param.name}>
+      <label>
+        {param.label} {param.required && "*"}
+      </label>
+      <input
+        type="text"
+        name={param.name}
+        value={formData[param.name] || ""}
+        onChange={handleChange}
+      />
+    </div>
+  ))}
+    
       {selectedOption && (
         <button
           className="submit-Btn"
