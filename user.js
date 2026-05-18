@@ -50,6 +50,49 @@ router.get("/get-api-key", async (req, res) => {
   }}
 );
 
+router.get("/user-preferences", async (req, res) => {
+  try {
+    const {
+      username,
+      password,
+      apiKey,
+      moduleName,
+      methodName,
+      lang = "en_US"
+    } = req.query;
+    if (
+      !username ||
+      !password ||
+      !apiKey ||
+      !moduleName ||
+      !methodName 
+    ) {
+      return res.status(400).json({
+        status: false,
+        message: "Fill all required fields"
+      });
+    }
+    const url = `${BASE_URL}` +
+      `?subscriber_login_id=${username}` +
+      `&subscriber_password=${password}` +
+      `&api_key=${apiKey}` +
+      `&moduleName=${moduleName}` +
+      `&methodName=${methodName}` +
+      `&lang=${lang}`;
+    console.log("User Preferences API:", url);
+    const response = await fetch(url);
+    const data = await response.json();
+    console.log("User Preferences Response:", data);
+    return res.json(data);
+  } catch (err) {
+    console.error("User Preferences Error:", err);
+    return res.status(500).json({
+      status: false,
+      message: "Failed to fetch preferences"
+    });
+  }
+});
+
   router.get("/generate-link", async (req, res) => {
   try {
     const {
