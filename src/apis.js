@@ -3,17 +3,38 @@ const API_KEY = "tg2zw99gwqb5";
 
 const normalizeSearchData = (data) => {
   if (!data || typeof data !== "object") return [];
-  return Object.values(data).map((item) => ({
-    part_id: item.part_id,
-    title: item.en_US || item.title || item.name || "No Title",
-    image:
-      item.image ||
-      item.image_url ||
-      item.thumbnail ||
-      "https://img.freepik.com/premium-photo/various-car-parts-accessories-isolated-white-background_771335-35715.jpg"
-    }
-  ));
+  return Object.values(data).map((item) => {
+    const isInteractive =
+      String(
+        item.is_interactive ??
+        item.interactive ??
+        0
+      );
+    return {
+      part_id: item.part_id,
+      title:
+        item.en_US ||
+        item.title ||
+        item.name ||
+        "No Title",
+      image:
+        item.image ||
+        item.image_url ||
+        item.thumbnail ||
+        "https://img.freepik.com/premium-photo/various-car-parts-accessories-isolated-white-background_771335-35715.jpg",
+      is_interactive: isInteractive,
+      interaction_label: getInteractionLabel(isInteractive),
+      viewed_count: item.viewed_count || 0,
+      usage_count: item.usage_count || 0
+    };
+  });
 };
+
+const getInteractionLabel = (value) => {
+  return String(value) === "1"
+  ? "Interactive"
+  : "Narrated";
+}
 
 export const searchAnimations = async (term, options = {}) => {
   if (!term) return [];
@@ -33,23 +54,94 @@ export const searchAnimations = async (term, options = {}) => {
     let data = {};
     try {
       data = JSON.parse(text);
+      console.log("Raw Search Data", data);
     } catch {
       console.error("Invalid JSON from API");
       return [];
     }
     return normalizeSearchData(data);
   } catch (err) {
-    console.warn("Search API failed, fallback used");
+    console.warn("Search API Failed");
     return [
       {
         part_id: "7011",
+        //is_interactive: "1",
         title: "Clutch System",
         image: "/clutchh.webp"
       }
-    ].filter((item) =>
-      item.title.toLowerCase().includes(term.toLowerCase())
+    ].filter((item) => item.title.toLowerCase().includes(term.toLowerCase())
     );
   }
+};
+
+export const getDisplayAnimation = async (payload) => {
+  try {
+    const query = new URLSearchParams({
+      term: payload.partId || "",
+      //key: payload.apiKey || "",
+      lang: payload.lang || "en_US",
+      brand: "generic"
+    });
+    const response = await fetch(
+      `http://localhost:5000/api/display-animations?${query}`
+    );
+    console.log("Display API Response:", await response.clone().json());
+    return await response.json();
+  } catch (err) {
+    console.error("Display API Error:", err);
+    return {
+      status: false,
+      message: err.message
+    };
+  }
+};
+
+export const getUserPreferences = async ({
+  username,
+  password,
+  apiKey,
+  moduleName,
+  methodName,
+  lang = "en_US"
+}) => {
+  try {
+    const url = `http://localhost:5000/api/user-preferences` +
+      `?username=${username}` +
+      `&password=${password}` +
+      `&apiKey=${apiKey}` +
+      `&moduleName=${moduleName}` +
+      `&methodName=${methodName}` +
+      `&lang=${lang}`;
+    console.log("User Preferences API:", url);
+    const res = await fetch(url);
+    const data = await res.json();
+    console.log("User Preferences Response:", data);
+    return data;
+  } catch (err) {
+    console.error("User Preferences Error:", err);
+    return {
+      status: false,
+      message: err.message
+    };
+  }
+};
+
+export const generateLoopAnimation = async ({login, password, mute }) => {
+  const response = await fetch(
+    "http://localhost:5000/api/generate-loop-animation",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        login,
+        password,
+        mute
+      })
+    }
+  );
+  return await response.json();
 };
 
 export const getUserDetails = async (username, password) => {
@@ -69,6 +161,25 @@ export const getUserDetails = async (username, password) => {
   }
 };
 
+export const getAnimationsWithCounts = async (term = "") => {
+  try {
+    const query = new URLSearchParams({
+      term
+    });
+    const response = await fetch(
+      `http://localhost:5000/api/display-animations?${query}`
+    );
+    const data = await response.json();
+    return data?.data || [];
+  } catch (err) {
+    console.error(
+      "Get Animations With Counts Error:",
+      err
+    );
+    return [];
+  }
+};
+
 export const trackAnimationView = async (
   unique_id,
   animation_name,
@@ -83,10 +194,9 @@ export const trackAnimationView = async (
     type,
     animation_id,
     video_url
-  });
-
+  }
+);
   try {
-
     const response = await fetch(
       "http://localhost:5000/api/track-view",
       {
@@ -109,7 +219,6 @@ export const trackAnimationView = async (
     console.error("Tracking error:", err);
   }
 };
-
 export const getViewCount = async (id = "all") => {
   try {
     const res = await fetch(
@@ -176,15 +285,14 @@ export const getApiKey = async (username, password) => {
     };
   }
 };
-
 export const getDynamicLink = async ({
   apiKey,
   partId,
   roNumber = "",
-  expireDays = 7
+  expireDays = 5
 }) => {
   try {
-    const url = `http://localhost:5000/api/generate-link?` + 
+    const url = `http://localhost:5000/api/generate-link?` +
     `apiKey=${apiKey}&partId=${partId}&roNumber=${roNumber}&expireDays=${expireDays}`;
     console.log("Generating Base Link:", url);
     const res = await fetch(url);
@@ -243,7 +351,7 @@ export const getAnimationDetails = async () => {
     const data = await res.json();
     return data;
   } catch (err) {
-    console.error("Failed to fetch animation details", err);
+    console.error("Failed to Fetch Animation Details", err);
     return null;
   }
 };
