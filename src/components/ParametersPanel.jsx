@@ -5,13 +5,15 @@ import { getAnimationShareLink } from "../services/api";
 import { updateAnimationLink } from "../services/api";  
 import { getAnimationLinkUsage } from "../services/api";
 import { useCallback } from "react";
+//import { getUsageReport } from "../services/api";
 import {
-  //getUsageReport,
   getViewedAnimations,
   getUserDetails,
   getApiKey,
   getDynamicLink,
-  getDisplayAnimation
+  generateLoopAnimation,
+  getUserPreferences
+  //getDisplayAnimation
 } from "../services/api";
 
 export const ParametersPanel = ({
@@ -28,19 +30,34 @@ export const ParametersPanel = ({
   const [status, setStatus] = useState(null);
   const [results, setResults] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
+
   useEffect(() => {
-    setFormData({});
-    setStatus(null);
+  setFormData({});
+  setStatus(null);
+  if (selectedOption === "search") {
+    setAnimationUrl({
+      type: "search",
+      data: []
+    });
+  } else {
     setAnimationUrl(null);
-  }, [selectedOption]);
-  
+  }}, [selectedOption]);
+
+  useEffect(() => {
+  if (
+    selectedOption !== "search"
+  ) return;
+  if (!debouncedTerm.trim()) return;
+  handleSearch(debouncedTerm);
+  }, [debouncedTerm]);
+
   const handleChange = (e) => {
     setFormData((prev) => ({
       ...prev,
       [e.target.name]: e.target.value
     }));
   };
-
+  
   useEffect(() => {
   if (selectedOption !== "search") return;
   const searchValue = formData.term?.trim();
@@ -67,23 +84,33 @@ export const ParametersPanel = ({
   //   //return () => clearTimeout(delay);
   // //}, [debouncedTerm]);
   
-  // const handleSearch = useCallback(async (searchTerm) => {
-  //   try {
-  //     setSearchLoading(true);
-  //     console.log("Searching the letter", searchTerm);
-  //     const results = await searchAnimations(searchTerm);
-  //     const filteredResults = results.filter(
-  //       (item) => 
-  //         item && item.part_id && (item.title || item.en_US)
-  //     );
-  //     data:filteredResults;
-  //   } catch (err) {
-  //     console.error("Search Error",err);
-  //     setAnimationUrl({ type: "search", data: [] });
-  //   } finally {
-  //     setSearchLoading(false);
-  //   }
-  // });
+  const handleSearch = useCallback(
+  async (searchTerm) => {
+    try {
+      setSearchLoading(true);
+      const results = await searchAnimations(searchTerm);
+      const filteredResults = results.filter(
+          (item) =>
+            item &&
+            item.part_id
+        );
+      setAnimationUrl({
+        type: "search",
+        data: filteredResults,
+        searchTerm
+      });
+    } catch (err) {
+      console.error(err);
+      setAnimationUrl({
+        type: "search",
+        data: []
+      });
+    } finally {
+      setSearchLoading(false);
+    }
+  },
+  []
+);
   
   const buildAnimationLinks = (partId) => {
     const base = `https://motovisuals.com/thirdpartyapi/#!/viewAnimation/${partId}?show_menu=0&show_left_sidebar=0&show_description=0&video_only=0&auto_play=0`;
@@ -92,19 +119,34 @@ export const ParametersPanel = ({
       narrated: `${base}&is_interactive=0`
     };
   };
+//   setAnimationUrl({
+//   type: "generateLoop",
+//   url: results.loopUrl
+// });
   
   //const getAuthData = () => {
     //const username = formData.username || formData.login || formData.subscriber_login_id || "";
     //const password = formData.password || formData.loginPassword || formData.subscriber_password || "";
     //return { username, password };
     // };
-    
+    const buildAnimationUrl = (partId, animationType) => {
+      return (
+        `https://dev.motovisuals.com/thirdpartyapi/#!/viewAnimation/${partId}` +
+        `?show_menu=0` +
+        `&is_interactive=${animationType}` +
+        `&show_left_sidebar=0` +
+        `&show_description=0` +
+        `&video_only=0` +
+        `&auto_play=1` +
+        `&mute=1`
+      );
+    };
     const handleRun = async () => {
       if (!selectedOption) return;
-    setLoading(true);
-    setStatus(null);
-    setResults([]);
-    try {
+      setLoading(true);
+      setStatus(null);
+      setResults([]);
+      try {
       const partId = (formData.partId || "").trim();
       if (selectedOption === "videoDetails") {
         if (!partId) return alert("Part ID is required");
@@ -113,11 +155,9 @@ export const ParametersPanel = ({
           type: "dual",
           interactive,
           normal: narrated
-        }
-      );
+        });
     }
-    
-      else if (selectedOption === "share") {
+    else if (selectedOption === "share") {
         if (!partId) return alert("Part ID required");
         const res = await getAnimationShareLink(partId);
         if (!res || !res.video_url) {
@@ -138,50 +178,95 @@ export const ParametersPanel = ({
       else if (selectedOption === "generateLoop") {
         const { login, password, mute } = formData;
         if (!login || !password) {
-          alert("Login & Password required");
+          alert("Login and Password are Required");
           return;
         }
-        const loopUrl = `https://interim.vehiclevisuals.com/looped-animations.php?username=${login}&password=${password}&mute=${mute || 1}`;
+        console.log("CALLING BACKEND API");
+        const res = await generateLoopAnimation({
+          login,
+          password,
+          mute
+        }
+      );
+      console.log("BACKEND RESPONSE:", res);
+      if (!res.success) {
+        setStatus({
+          type: "error",
+          msg: res.message || "Loop generation failed"
+        });
+        return;
+      }
+      setAnimationUrl({
+        type: "looped",
+        url: res.loopUrl
+      }
+    );
+  }
+      else if (selectedOption === "display") {
+        const {login,password,partId,apiKey,interactive} = formData;
+        if ( !login || !password || !partId || !apiKey) {
+          return alert("Fill All the Required Fields");
+        }
+          const mode = interactive === "1"
+        ? "interactive"
+        : "narrated";
+        const base = `https://dev.motovisuals.com/thirdpartyapi/#!/viewAnimation/${partId}` +`?show_menu=0` +`&show_left_sidebar=0` +
+        `&show_description=0` +
+        `&video_only=0` +
+        `&auto_play=0`;
+        const animationUrl = `${base}&is_interactive=${interactive}`;
+        // const animationUrl = is_interactive === "1"
+        // ? animation.interactive_url
+        // : animation.narrated_url;
         setAnimationUrl({
-          type: "generateLoop",
-          url: loopUrl
+          type: "display", mode,
+          data: {
+            title:
+            mode === "interactive"
+            ? "Interactive Animation"
+            : "Narrated Animation",
+            url: animationUrl,
+            partId: partId
+          }
+        });
+      }
+
+      else if (selectedOption === "catalog") {
+        const { login, password, apiKey, moduleName, methodName,
+          lang,
+          animationType,
+          brand,
+          partId
+        } = formData;
+        if (!partId) {
+          return alert("Part ID missing");
+        }
+        const mode = animationType === "1"
+        ? "interactive"
+        : "narrated";
+        const animationUrl = buildAnimationUrl(
+          partId,
+          animationType
+        );
+        setAnimationUrl({
+          type: "single",
+          data: {
+            title:
+            mode === "interactive"
+            ? "Interactive Animation"
+            : "Narrated Animation",
+            url: animationUrl,
+            type: mode,
+            partId: partId,
+            description:
+            mode === "interactive"
+            ? "Interactive Animation"
+            : "Narrated Animation"
+          }
         }
       );
     }
-      else if (selectedOption === "display") {
-        const {login,password,partId,apiKey,lang,is_interactive} = formData;
-        if ( !login || !password || !partId || !apiKey) {
-          return alert("Fill all required fields");
-        }
-        const res = await getDisplayAnimation({
-          login, password,
-          partId, apiKey, lang, is_interactive
-        });
-        console.log("DISPLAY RESPONSE:", res);
-        const base = `https://dev.motovisuals.com/thirdpartyapi/#!/viewAnimation/${partId}` +
-    `?show_menu=0` +
-    `&show_left_sidebar=0` +
-    `&show_description=0` +
-    `&video_only=0` +
-    `&auto_play=0`;
-    const mode =
-    is_interactive === "1"
-      ? "interactive"
-      : "narrated";
-  const animationUrl = `${base}&is_interactive=${is_interactive}`;
-  setAnimationUrl({
-    type: "display",
-    mode,
-    data: {
-      title:
-        mode === "interactive"
-          ? "Interactive Animation"
-          : "Narrated Animation",
-      url: animationUrl,
-      partId: partId
-    }
-  });
-}
+    
       else if (selectedOption === "update") {
         const res = await updateAnimationLink({
           unique_id: formData.uniqueId,
@@ -190,12 +275,14 @@ export const ParametersPanel = ({
           cost: formData.cost,
           track_type: formData.trackType || "email",
           lang: "en_USA"
-        });
+        }
+      );
         setStatus({
           type: res?.status ? "success" : "error",
           msg: res?.message || "Update failed"
-        });
-      }
+        }
+      );
+    }
       
       else if (selectedOption === "usage") {
         if (!formData.jobId) return alert("Job ID required");
@@ -203,8 +290,10 @@ export const ParametersPanel = ({
         setAnimationUrl({
           type: "usage",
           data: res?.data || {}
-        });
-      }
+        }
+      );
+    }
+    
       else if (selectedOption === "viewed") {
         if(!formData.dateFrom || !formData.dateTo){
            return alert("From Date and To Date Required");
@@ -219,8 +308,10 @@ export const ParametersPanel = ({
         setAnimationUrl({
           type: "viewed",
           data: res?.data || []
-        });
-      }
+        }
+      );
+    }
+
       else if (selectedOption === "details") {
         const username = formData.username || formData.login || formData.subscriber_login_id;
         const password = formData.password || formData.loginPassword || formData.subscriber_password;
@@ -238,14 +329,14 @@ export const ParametersPanel = ({
         }
         setAnimationUrl({
           type: "userDetails",
-          data: res.data
+          data: res
         });
       }
       else if (selectedOption === "get") {
         const username = formData.username;
         const password = formData.password;
-        const moduleName = formData.moduleName;
-        const methodName = formData.methodName;
+        //const moduleName = formData.moduleName;
+        //const methodName = formData.methodName;
         if (!username || !password) {
           return alert("Username & Password required");
         }
@@ -267,7 +358,43 @@ export const ParametersPanel = ({
       )
       setApiKey(res?.data.apiKey || "");
     }
-      else if (selectedOption === "links") {
+    else if (selectedOption === "preference") {
+      const { username,
+        password,
+        apiKey,
+        moduleName = "user",
+        methodName = "getUserPreferences",
+        lang
+      } = formData;
+        if (
+          !username ||
+          !password ||
+          !apiKey ||
+          !moduleName ||
+          !methodName
+        ) {
+          return alert("Fill all the Required Fields");
+        }
+        const res = await getUserPreferences({ username, password,
+          apiKey,
+          moduleName,
+          methodName,
+          lang
+        });
+        if (!res?.status) {
+          setStatus({
+            type: "error",
+            msg: res?.message || "Failed to fetch preferences"
+          });
+          return;
+        }
+        setAnimationUrl({
+          type: "preferences",
+          data: res.data
+        }
+      );
+    }
+    else if (selectedOption === "links") {
         const partId = formData.partId;
         const roNumber = formData.roNumber;
         const apiKeyValue = formData.apiKey || apiKey;
@@ -315,7 +442,7 @@ export const ParametersPanel = ({
   return (
     <div className="search">
       <h3>API Parameters</h3>
-      {selectedOption === "preference" && (
+      {/* {selectedOption === "preference" && (
         <div className="form-group">
           <label>API Key *</label>
           <input
@@ -326,7 +453,7 @@ export const ParametersPanel = ({
           />
         </div>
       )
-    }
+    } */}
       {parameters .filter( (param) => !(
         selectedOption === "search" &&
         param.name === "term"
@@ -349,11 +476,7 @@ export const ParametersPanel = ({
       {selectedOption && (
         <button
           className="submit-Btn"
-          onClick={
-            selectedOption === "preference"
-              ? handleGetUserPreferences
-              : handleRun
-          }
+          onClick={handleRun}
           disabled={loading}>
           {loading ? "Processing..." : "Run API"}
         </button>
