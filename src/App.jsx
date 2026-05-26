@@ -20,11 +20,11 @@ function App() {
   const [prefs, setPrefs] = useState(null);
   const [loadingPrefs, setLoadingPrefs] = useState(false);
   const [errorPrefs, setErrorPrefs] = useState("");
-  const handleSelectPart = () => {
+  const handleSelectPart = (partId) => {
     setAnimationUrl({
       type: "dual",
-      interactive: "https://dev.motovisuals.com/thirdpartyapi/#!/viewAnimation/7011?show_menu=0&is_interactive=1&show_left_sidebar=0&show_description=0&video_only=0&auto_play=0",
-      normal: "https://motovisuals.com/thirdpartyapi/#!/viewAnimation/7011?show_menu=0&is_interactive=0&show_left_sidebar=0&show_description=0&video_only=0&auto_play=0"
+      interactive: `https://dev.motovisuals.com/thirdpartyapi/#!/viewAnimation/${partId}?show_menu=0&is_interactive=1&show_left_sidebar=0&show_description=0&video_only=0&auto_play=0`,
+      narrated: `https://motovisuals.com/thirdpartyapi/#!/viewAnimation/${partId}?show_menu=0&is_interactive=0&show_left_sidebar=0&show_description=0&video_only=0&auto_play=0`
     }
   );
 };
@@ -36,8 +36,8 @@ function App() {
       />
       <Route
       path="/"
-    element={
-    <div className="app-container">
+      element={
+      <div className="app-container">
       <Header />
       <div className="main-layout">
         <Sidebar
@@ -46,10 +46,9 @@ function App() {
             setAnimationUrl(null);
           }}
         />
-        
         <div className="center-content">
           {selectedOption === "catalog" && (
-            !animationUrl ? (
+            !animationUrl || animationUrl.type !== "single" ? (
               <Dashboard
               selectedOption={selectedOption}
               setAnimationUrl={setAnimationUrl}
@@ -59,58 +58,67 @@ function App() {
               setFormData={setFormData}
               />
             ):(
-            <AnimationViewer
-            animationUrl={animationUrl}
-            selectedOption={selectedOption}
-            goBack={() => setAnimationUrl(null)}
-            formData={formData}
-            setFormData={setFormData}
+              <AnimationViewer
+              animationUrl={animationUrl}
+              selectedOption={selectedOption}
+              goBack={() => setAnimationUrl(null)}
+              formData={formData}
+              setFormData={setFormData}
             />
           )
-          )}
+        )}
           {selectedOption === "search" && (
             <>
             <div style={{ padding: "10px" }}>
-              <input
-              type="text"
+          <input
+          type="text"
           placeholder="Search animations"
           value={formData.term || ""}
-          onChange={(e) =>
-            setFormData((prev) => ({
-              ...prev,
-              term: e.target.value
-            })
-          )
+          onChange={(e) => {
+          const value = e.target.value;
+          setFormData((prev) => ({
+            ...prev,
+            term: value
+          }));
+          setAnimationUrl((prev) => ({
+            ...prev,
+            type: "search",
+            data: prev?.data || []
+          }));
+      }}
+        style={{
+          width: "100%",
+          padding: "10px",
+          borderRadius: "8px",
+          border: "1px solid #ccc"
+        }}
+      />
+    </div>
+    {!animationUrl || animationUrl.type === "viewer" || !animationUrl.selectedAnimation ? (
+      <Dashboard
+        selectedOption={selectedOption}
+        setAnimationUrl={setAnimationUrl}
+        handleSelectPart={handleSelectPart}
+        animationUrl={animationUrl}
+        formData={formData}
+        setFormData={setFormData}
+      />
+    ) : (
+      <AnimationViewer
+        animationUrl={animationUrl}
+        selectedOption={selectedOption}
+        goBack={() =>
+          setAnimationUrl({
+            type: "search",
+            data: animationUrl.previousResults || animationUrl.data || []
+        })
         }
-          style={{
-            width: "100%",
-            padding: "10px",
-            borderRadius: "8px",
-            border: "1px solid #ccc"
-          }}
-        />
-      </div>
-
-      {!animationUrl ? (
-        <Dashboard
-          selectedOption={selectedOption}
-          setAnimationUrl={setAnimationUrl}
-          handleSelectPart={handleSelectPart}
-          animationUrl={animationUrl}
-          formData={formData}
-          setFormData={setFormData}
-        />
-      ) : (
-        <AnimationViewer
-          animationUrl={animationUrl}
-          selectedOption={selectedOption}
-          goBack={() => setAnimationUrl(null)}
-          formData={formData}
-          setFormData={setFormData}
-        />
-      )}
-    </>
-  )}
+        formData={formData}
+        setFormData={setFormData}
+      />
+    )}
+  </>
+)}
   
   {selectedOption === "share" && (
     <>
@@ -127,7 +135,6 @@ function App() {
   {selectedOption === "update" && (
     <>
       <UpdateLinkPanel />
-
       {animationUrl && (
         <AnimationViewer
           animationUrl={animationUrl}
@@ -146,10 +153,8 @@ function App() {
         goBack={() => setAnimationUrl(null)}
       />
   )}
-
-</div>
-        
-        <div className="right-panel">
+  </div>
+  <div className="right-panel">
           <ParametersPanel
             key={selectedOption}
             selectedOption={selectedOption}
