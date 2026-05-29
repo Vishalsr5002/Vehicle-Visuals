@@ -17,6 +17,15 @@ const normalizeSearchData = (data) => {
         item.title ||
         item.name ||
         "No Title",
+      description:
+        item.description ||
+        item.video_description ||
+        item.details_description ||
+        item.animation_description ||
+        item.en_US_description ||
+        item.summary ||
+        item.desc ||
+        "",
       image:
         item.image ||
         item.image_url ||
@@ -29,7 +38,6 @@ const normalizeSearchData = (data) => {
     };
   });
 };
-
 const getInteractionLabel = (value) => {
   return String(value) === "1"
   ? "Interactive"
@@ -55,11 +63,12 @@ export const searchAnimations = async (term, options = {}) => {
     try {
       data = JSON.parse(text);
       console.log("Raw Search Data", data);
+      const actualData = data.data || data;
+      return normalizeSearchData(actualData);
     } catch {
       console.error("Invalid JSON from API");
       return [];
     }
-    return normalizeSearchData(data);
   } catch (err) {
     console.warn("Search API Failed");
     return [
@@ -81,7 +90,8 @@ export const getDisplayAnimation = async (payload) => {
       //key: payload.apiKey || "",
       lang: payload.lang || "en_US",
       brand: "generic"
-    });
+    }
+  );
     const response = await fetch(
       `http://localhost:5000/api/display-animations?${query}`
     );
@@ -117,7 +127,7 @@ export const getUserPreferences = async ({
     const data = await res.json();
     console.log("User Preferences Response:", data);
     return data;
-  } catch (err) {
+   }catch (err) {
     console.error("User Preferences Error:", err);
     return {
       status: false,
@@ -390,7 +400,7 @@ export const getAnimationUrls = (partId) => {
       `&show_description=0` +
       `&video_only=0` +
       `&auto_play=0`,
-    normal:
+    narrated:
       `${base}` +
       `?show_menu=0` +
       `&is_interactive=0` +
@@ -405,7 +415,7 @@ export const generateViewerLinks = (partId) => {
   return {
     type: "dual",
     interactive: `https://dev.motovisuals.com/thirdpartyapi/#!/viewAnimation/${partId}?show_menu=0&is_interactive=1&show_left_sidebar=0&show_description=0&video_only=0&auto_play=0`,
-    normal: `https://motovisuals.com/thirdpartyapi/#!/viewAnimation/${partId}?show_menu=0&is_interactive=0&show_left_sidebar=0&show_description=0&video_only=0&auto_play=0`
+    narrated: `https://motovisuals.com/thirdpartyapi/#!/viewAnimation/${partId}?show_menu=0&is_interactive=0&show_left_sidebar=0&show_description=0&video_only=0&auto_play=0`
   };
 };
 
@@ -428,7 +438,7 @@ export const getAnimationShareLink = async (partId) => {
     let result = null;
     if (Array.isArray(data))
       result = data[0];
-    else if (data?.data && typeof data.data === "object") 
+    else if (data?.data && typeof data.data === "object")
       result = data.data;
     else if (data?.video_url)
       result = data;
@@ -599,7 +609,7 @@ export const generateLoopedAnimationLink = async ({
     console.log("Loop API URL:", url);
     const res = await fetch(url);
     const text = await res.text();
-    console.log("Loop API RAW RESPONSE:", text);
+    console.log("Loop API Raw Response:", text);
     let data;
     try {
       data = JSON.parse(text);
