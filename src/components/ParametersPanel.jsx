@@ -6,13 +6,14 @@ import { updateAnimationLink } from "../services/api";
 import { getAnimationLinkUsage } from "../services/api";
 import { useCallback } from "react";
 //import { getUsageReport } from "../services/api";
+import { getViewedAnimations } from "../services/api";
 import {
-  getViewedAnimations,
   getUserDetails,
   getApiKey,
   getDynamicLink,
   generateLoopAnimation,
-  getUserPreferences
+  getUserPreferences,
+  generateShortShareLink
   //getDisplayAnimation
 } from "../services/api";
 
@@ -32,17 +33,11 @@ export const ParametersPanel = ({
   const [searchLoading, setSearchLoading] = useState(false);
 
   useEffect(() => {
-  setFormData({});
   setStatus(null);
-  if (selectedOption === "search") {
-    setAnimationUrl({
-      type: "search",
-      data: []
-    });
-  } else {
+  if (selectedOption !== "search") {
     setAnimationUrl(null);
   }}, [selectedOption]);
-
+  
   useEffect(() => {
   if (
     selectedOption !== "search"
@@ -52,52 +47,126 @@ export const ParametersPanel = ({
   }, [debouncedTerm]);
 
   const handleChange = (e) => {
-    setFormData((prev) => ({
-      ...prev,
-      [e.target.name]: e.target.value
-    }));
-  };
+  console.log(
+    "INPUT:",
+    e.target.name,
+    e.target.value
+  );
+  setFormData((prev) => ({
+    ...prev,
+    [e.target.name]: e.target.value
+  }));
+};
   
   useEffect(() => {
   if (selectedOption !== "search") return;
   const searchValue = formData.term?.trim();
   if (!searchValue) {
-    setAnimationUrl({
-      type: "search",
-      data: []
-    });
-    return;
-  }
+  const defaultCards = [
+    {
+      part_id: "7011",
+      customTitle: "Clutch 1",
+      customBadge: "Interactive",
+      is_interactive: "1"
+    },
+    {
+      part_id: "7011",
+      customTitle: "Clutch 2",
+      customBadge: "Narrated",
+      is_interactive: "0"
+    }
+  ];
+  setAnimationUrl({
+    type: "search",
+    data: defaultCards,
+    loading: false
+  });
+  return;
+}
+  console.log("Typing", searchValue);
   const timer = setTimeout(() => {
+    console.log("Debounced API", searchValue);
     setDebouncedTerm(searchValue);
   }, 500);
-  return () => clearTimeout(timer);
+  return () =>{
+    console.log("Debounce is Cleared");
+    clearTimeout(timer);
+  }
 }, [formData.term, selectedOption]);
-
   // useEffect(() => {
   //   if(selectedOption !== "search") return;
   //   if(!debouncedTerm.trim()) return;
-  //   //const delay = setTimeout(() =>{
-  //   //console.log("End Point", debouncedTerm);
-  //   //handleSearch(debouncedTerm);
-  //   //}, 800);
-  //   //return () => clearTimeout(delay);
-  // //}, [debouncedTerm]);
-  
+  //   const delay = setTimeout(() =>{
+  //   console.log("End Point", debouncedTerm);
+  //   handleSearch(debouncedTerm);
+  //   }, 800);
+  //   return () => clearTimeout(delay);
+  // }, [debouncedTerm]);
   const handleSearch = useCallback(
   async (searchTerm) => {
     try {
+      console.log("API Cleared", searchTerm);
       setSearchLoading(true);
+      setAnimationUrl((prev)=>({
+        ...prev,
+        loading: true
+      }));
       const results = await searchAnimations(searchTerm);
-      const filteredResults = results.filter(
-          (item) =>
-            item &&
-            item.part_id
-        );
+      console.log("Raw Results", results);
+      const clutchMaster = results.find( (item) => item.part_id === "7011");
+      if (!clutchMaster) {
+        setAnimationUrl({
+          type: "search",
+          data: [],
+          loading: false
+        });
+        return;
+      }
+    //   const allCards = [{
+    //     ...clutchMaster,
+    //     customTitle: "Clutch 1",
+    //     customBadge: "Interactive",
+    //     is_interactive: "1"
+    //   },
+    //   {
+    //     ...clutchMaster,
+    //     customTitle: "Clutch 2",
+    //     customBadge: "Narrated",
+    //     is_interactive: "0"
+    //   }
+    // ];
+    const searchLower = searchTerm.toLowerCase();
+    const searchValue = searchTerm.toLowerCase().trim();
+    const filteredResults = [];
+    if ("clutch 1".includes(searchValue)) {
+      filteredResults.push({
+        title: "Clutch 1",
+        interaction_label: "Interactive",
+        is_interactive: "1",
+        part_id: "7011"
+      });
+    }
+    if ("clutch 2".includes(searchValue)) {
+      filteredResults.push({
+        title: "Clutch 2",
+        interaction_label: "Narrated",
+        is_interactive: "0",
+        part_id: "7011"
+      });
+    }
+      console.log("Filtered Results", filteredResults);
+      const customCards = filteredResults.map((item) => ({
+        ...item,
+        customTitle: item.title,
+        customBadge: item.interaction_label
+      })
+    );
       setAnimationUrl({
         type: "search",
-        data: filteredResults,
-        searchTerm
+        data: customCards,
+        previousResults: filteredResults,
+        searchTerm,
+        loading: false
       });
     } catch (err) {
       console.error(err);
@@ -149,22 +218,46 @@ export const ParametersPanel = ({
       try {
       const partId = (formData.partId || "").trim();
       if (selectedOption === "videoDetails") {
-        if (!partId) return alert("Part ID is required");
-        const { interactive, narrated } = buildAnimationLinks(partId);
-        setAnimationUrl({
-          type: "dual",
-          interactive,
-          normal: narrated
-        });
+        if (!partId) {
+          return alert("Part ID is required");
+        }
+        setFormData((prev) => ({
+          ...prev,
+          login: "motovisuals",
+          password: "motovisuals",
+          apiKey: "tg2zw99gwqb5",
+          partId: partId,
+          moduleName: "animation",
+          methodName: "getVideoDetails",
+          lang: "en_US",
+          brand: "VV",
+          driverside: "LHD"
+        }
+      ));
+      const { interactive, narrated } = buildAnimationLinks(partId);
+      setAnimationUrl({
+      type: "dual",
+      interactive,
+      normal: narrated
     }
-    else if (selectedOption === "share") {
+  );
+}
+      else if (selectedOption === "share") {
         if (!partId) return alert("Part ID required");
         const res = await getAnimationShareLink(partId);
         if (!res || !res.video_url) {
           setStatus({ type: "error", msg: "Failed to generate link" });
           return;
         }
-        const base = `https://dev.motovisuals.com/thirdpartyapi/#!/viewAnimation/${partId}?show_menu=0&show_left_sidebar=0&show_description=0&video_only=0&auto_play=0`;
+        const timestamp = Date.now();
+        const base = `https://dev.motovisuals.com/thirdpartyapi/#!/viewAnimation/${partId}` +
+        `?show_menu=0` +
+        `&show_left_sidebar=0` +
+        `&show_description=0` +
+        `&video_only=0` +
+        `&auto_play=0` +
+        `&_t=${timestamp}`;
+        //const base = `https://dev.motovisuals.com/thirdpartyapi/#!/viewAnimation/${partId}?show_menu=0&show_left_sidebar=0&show_description=0&video_only=0&auto_play=0`;
         setAnimationUrl({
           type: "share",
           data: {
@@ -199,38 +292,45 @@ export const ParametersPanel = ({
       setAnimationUrl({
         type: "looped",
         url: res.loopUrl
-      }
-    );
-  }
+      });
+    }
       else if (selectedOption === "display") {
-        const {login,password,partId,apiKey,interactive} = formData;
+        const {login,password,partId,apiKey,is_interactive} = formData;
         if ( !login || !password || !partId || !apiKey) {
           return alert("Fill All the Required Fields");
         }
-          const mode = interactive === "1"
+        const mode = is_interactive === "1"
         ? "interactive"
         : "narrated";
-        const base = `https://dev.motovisuals.com/thirdpartyapi/#!/viewAnimation/${partId}` +`?show_menu=0` +`&show_left_sidebar=0` +
-        `&show_description=0` +
-        `&video_only=0` +
-        `&auto_play=0`;
-        const animationUrl = `${base}&is_interactive=${interactive}`;
+         const animationUrl = `https://dev.motovisuals.com/thirdpartyapi/#!/viewAnimation/${partId}` +
+         `?show_menu=0` +
+         `&show_left_sidebar=0` +
+         `&show_description=0` +
+         `&video_only=0` +
+         `&auto_play=0` +
+         `&is_interactive=${is_interactive}`;
+         console.log("Interactive Value", is_interactive);
+         console.log("Mode", mode);
+         console.log("Url", animationUrl);
+        //const animationUrl = `${base}&is_interactive=${interactive}`;
         // const animationUrl = is_interactive === "1"
         // ? animation.interactive_url
         // : animation.narrated_url;
         setAnimationUrl({
-          type: "display", mode,
+          type: "display",
           data: {
             title:
             mode === "interactive"
             ? "Interactive Animation"
             : "Narrated Animation",
             url: animationUrl,
-            partId: partId
+            partId: partId,
+            mode: mode,
+            interactiveValue: is_interactive
           }
         });
       }
-
+      
       else if (selectedOption === "catalog") {
         const { login, password, apiKey, moduleName, methodName,
           lang,
@@ -311,11 +411,10 @@ export const ParametersPanel = ({
         }
       );
     }
-
-      else if (selectedOption === "details") {
-        const username = formData.username || formData.login || formData.subscriber_login_id;
-        const password = formData.password || formData.loginPassword || formData.subscriber_password;
-        if (!username || !password) {
+    else if (selectedOption === "details") {
+      const username = formData.username || formData.login || formData.subscriber_login_id;
+      const password = formData.password || formData.loginPassword || formData.subscriber_password;
+      if (!username || !password) {
           return alert("Username & Password required");
         }
         const res = await getUserDetails(username, password);
@@ -418,13 +517,27 @@ export const ParametersPanel = ({
           });
           return;
         }
-        setAnimationUrl({
-          type: "emailLink",
-          interactive: res.data?.interactive,
-          narrated: res.data?.narrated,
-          shortInteractive: res.data?.shortInteractive,
-          shortNarrated: res.data?.shortNarrated
-        });
+        const interactiveShort = await generateShortShareLink(
+  res.data?.interactive
+);
+
+const narratedShort = await generateShortShareLink(
+  res.data?.narrated
+);
+
+setAnimationUrl({
+  type: "emailLink",
+  interactive: res.data?.interactive,
+  narrated: res.data?.narrated,
+
+  shortInteractive:
+    interactiveShort?.shortUrl ||
+    res.data?.interactive,
+
+  shortNarrated:
+    narratedShort?.shortUrl ||
+    res.data?.narrated
+});
       }
     } catch (err) {
       console.error(err);
@@ -454,12 +567,13 @@ export const ParametersPanel = ({
         </div>
       )
     } */}
-      {parameters .filter( (param) => !(
+    {parameters .filter(
+    (param) =>!(
         selectedOption === "search" &&
         param.name === "term"
       )
     )
-    .map((param) => (
+  .map((param) => (
     <div className="form-group" key={param.name}>
       <label>
         {param.label} {param.required && "*"}
