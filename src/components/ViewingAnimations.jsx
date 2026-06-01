@@ -6,6 +6,14 @@ function ViewingAnimations() {
   const Clutch_Description = "The clutch master cylinder is a vital hydraulic component in manual transmission vehicles that acts as a translator between the driver's foot and the clutch mechanism.";
   const INTERACTIVE_URL = "https://dev.motovisuals.com/thirdpartyapi/#!/viewAnimation/7011?show_menu=0&is_interactive=1&show_left_sidebar=0&show_description=0&video_only=0&auto_play=0";
   const NARRATED_URL = "https://dev.motovisuals.com/thirdpartyapi/#!/viewAnimation/7011?show_menu=0&is_interactive=0&show_left_sidebar=0&show_description=0&video_only=0&auto_play=0";
+  const animationGrid = [
+    INTERACTIVE_URL,
+    NARRATED_URL,
+    INTERACTIVE_URL,
+    NARRATED_URL,
+    INTERACTIVE_URL,
+    NARRATED_URL
+  ];
   const handleLoadAnimation = () => {
     if (!animationLink.trim()) {
       alert("Please Enter an Animation URL");
@@ -75,16 +83,16 @@ function ViewingAnimations() {
       <>
       <hr className="animation-divider" />
       <div className="animation-row reverse">
-      <div className="animation-frame">
-        <iframe
+        <div className="animation-frame">
+          <iframe
           src={narratedSrc}
           title="Narrated Animation"
           allowFullScreen />
-        </div>
-        <div className="animation-content">
-          <span className="animation-badge narrated">
-          Narrated Animation
-          </span>
+          </div>
+          <div className="animation-content">
+            <span className="animation-badge narrated">
+              Narrated Animation
+              </span>
           <h2>Clutch Master Cylinder</h2>
           <p>{Clutch_Description}</p>
           <a
@@ -98,6 +106,25 @@ function ViewingAnimations() {
       </div>
     </>
    )}
+   <div className="animation-gallery">
+  <h2 className="gallery-title">
+    More Animations
+  </h2>
+  <div className="animation-grid-view">
+    {animationGrid.map((url, index) => (
+      <div
+        key={index}
+        className="animation-grid-card"
+      >
+        <iframe
+          src={url}
+          title={`Animation-${index}`}
+          allowFullScreen
+        />
+      </div>
+    ))}
+  </div>
+</div>
     </div>
   );
 }
