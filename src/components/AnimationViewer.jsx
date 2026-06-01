@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import RealTimeClock from "./RealTimeClock";
 import { getVideoDetails } from "../services/api";
-import { FileText } from "lucide-react";
+import { AArrowDown, FileText } from "lucide-react";
 import { trackAnimationView, getViewCount, getViewedReport, generateShortShareLink, getAnimationsWithCounts } from "../services/api";
 import { Mail } from "lucide-react";
 import { useRef } from "react";
@@ -89,9 +89,7 @@ const EmailModal = ({
            > Send </button>
           <button
             onClick={() => setShowEmailModal(false)}
-          >
-            Cancel
-          </button>
+          > Cancel </button>
         </div>
       </div>
     </div>
@@ -103,7 +101,7 @@ const AnimationViewer = ({ animationUrl, goBack }) => {
   const [viewedData, setViewedData] = useState([]);
   const [animationResults, setAnimationResults] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
-  //const [selectedDate, setSelectedDate] = useState("");
+  const [selectedAnimation, setSelectedAnimation] = useState(null);
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [emailForm, setEmailForm] = useState({ from: "", to: "", cc: "", subject: ""});
   const [generatedShortLink, setGeneratedShortLink] = useState("");
@@ -261,8 +259,11 @@ const AnimationViewer = ({ animationUrl, goBack }) => {
     console.error("Track Error:", err);
   }
 };
-const openAnimation = (type, url, title) => {
+const openAnimation = (type, url, title, animationData) => {
+  console.log("OPENED ANIMATION");
+  console.log(animationData);
   setActiveAnimation(url);
+  setSelectedAnimation(animationData);
   trackingRef.current._pendingTrack = {
     type,
     title: title || "",
@@ -271,34 +272,53 @@ const openAnimation = (type, url, title) => {
 };
   const handleGeneratePDF = async () => {
     try {
-      const data = animationUrl?.data ||
-          animationUrl?.selectedAnimation || {};
+      const selected = selectedAnimation || animationUrl?.selectedAnimation || null;
+      const results = animationUrl?.data;
+      let dataForPdf = {};
+      if (selected && typeof selected === "object") {
+        dataForPdf = selected;
+      } else if (Array.isArray(results)) {
+        const selectedTitle = selected?.title || selected?.animation_name;
+        const selectedPartId = selected?.part_id || selected?.partId;
+
+        dataForPdf =
+          results.find((it) => {
+            const itTitle = it?.title || it?.animation_name;
+            const itPartId = it?.part_id || it?.partId;
+            return (
+              (selectedTitle && itTitle === selectedTitle) ||
+              (selectedPartId && itPartId === selectedPartId)
+            );
+          }) || results[0] || {};
+      } else if (results && typeof results === "object") {
+        dataForPdf = results;
+      }
+
       const pdfDescription =
-          data?.description ||
-          data?.video_description ||
-          data?.details_description ||
-          data?.animation_description ||
-          videoData?.data?.description ||
-          videoData?.description ||
-          videoData?.video_description ||
-          videoData?.details_description ||
-          animationUrl?.selectedAnimation?.description ||
-          "No Description Available";
-            console.log("Sending data:", data);
-            console.log("PDF Description", pdfDescription);
-            console.log("Video Data", videoData);
+        dataForPdf?.description ||
+        dataForPdf?.video_description ||
+        dataForPdf?.details_description ||
+        dataForPdf?.animation_description ||
+        dataForPdf?.summary ||
+        "No Description Available";
+        console.log("SELECTED ANIMATION", selectedAnimation);
+        console.log("ANIMATION URL", animationUrl);
+        console.log("DATA FOR PDF", dataForPdf);
+        console.log("PDF DESCRIPTION", pdfDescription);
+        console.log("DESCRIPTION FIELD:", dataForPdf?.description);
+        console.log("PDF DESCRIPTION FIELD:", dataForPdf?.pdfDescription);
+
       const res = await fetch("http://localhost:5000/api/generate-pdf", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          title: data.title || "Animation Report",
-          //description: pdfDescription,
+          title: dataForPdf.title || "Animation Report",
           leftText: pdfDescription,
           rightText: pdfDescription,
-          image1: data.image1 || "http://localhost:5173/carimg.jpg",
-          image2: data.image2 || "http://localhost:5173/spares.jpg"
+          image1: dataForPdf.image1 || dataForPdf.image || "http://localhost:5173/carimg.jpg",
+          image2: dataForPdf.image2 || dataForPdf.image || "http://localhost:5173/spares.jpg"
         })
       }
     );
@@ -553,16 +573,15 @@ if (animationUrl?.type === "search") {
                   display: "flex",
                   gap: "10px",
                   marginBottom: "10px"
-                }}
-              >
+                }}>
                 <button
                   onClick={() =>
                     openAnimation(
                       "interactive",
                       interactiveLink,
-                      `${item.animation_name} (Interactive Animation)`
-                    )}
-                >
+                      `${item.animation_name} (Interactive Animation)`,
+                      item
+                    )}>
                   Open Interactive
                 </button>
                 <button
@@ -570,7 +589,8 @@ if (animationUrl?.type === "search") {
                     openAnimation(
                       "narrated",
                       narratedLink,
-                      `${item.animation_name} (Narrated Animation)`
+                      `${item.animation_name} (Narrated Animation)`,
+                      item
                     )
                   }
                 >
@@ -755,8 +775,7 @@ if (animationUrl?.type === "search") {
                 onClick={() =>
                   navigator.clipboard.writeText(
                     data.shortNarrated || ""
-                  )}
-              >
+                  )}>
                 Copy
               </button>
               <button
@@ -765,8 +784,7 @@ if (animationUrl?.type === "search") {
                   window.open(
                     data.narrated,
                     "_blank"
-                  )}
-              >
+                  )}>
                 Open
               </button>
             </div>
@@ -786,8 +804,7 @@ if (animationUrl?.type === "search") {
               handleTrack(
                 "narrated",
                 "Clutch(Narrated Animation)"
-              )}
-          />
+              )}/>
         </div>
       </div>
     </div>
@@ -807,8 +824,7 @@ if (animationUrl.type === "share") {
           fontSize: "30px",
           fontWeight: "700",
           marginBottom: "25px"
-        }}
-      >
+        }}>
         {data.video_title || "Animation Share Links"}
       </h2>
       <div className="share-id-card">
@@ -829,8 +845,7 @@ if (animationUrl.type === "share") {
                 onClick={() =>
                   navigator.clipboard.writeText(
                     interactiveLink
-                  )}
-              >
+                  )}>
                 Copy
               </button>
               <button
@@ -839,8 +854,7 @@ if (animationUrl.type === "share") {
                   window.open(
                     interactiveLink,
                     "_blank"
-                  )}
-              >
+                  )}>
                 Open
               </button>
             </div>
@@ -858,9 +872,7 @@ if (animationUrl.type === "share") {
               handleTrack(
                 "interactive",
                 "Clutch(Interactive Animation)"
-              )
-            }
-          />
+              )}/>
         </div>
         <div className="share-preview-card">
           <div className="share-link-header">
@@ -871,8 +883,7 @@ if (animationUrl.type === "share") {
                 onClick={() =>
                   navigator.clipboard.writeText(
                     narratedLink
-                  )}
-              >
+                  )}>
                 Copy
               </button>
               <button
@@ -881,8 +892,7 @@ if (animationUrl.type === "share") {
                   window.open(
                     narratedLink,
                     "_blank"
-                  )}
-              >
+                  )}>
                 Open
               </button>
             </div>
@@ -900,14 +910,12 @@ if (animationUrl.type === "share") {
               handleTrack(
                 "narrated",
                 "Clutch(Narrated Animation)"
-              )
-            }
-          />
+              )}/>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
-  );
-}
+      );
+    }
   if (animationUrl.type === "single") {
     const data = animationUrl.selectedAnimation || animationUrl.data;
     return (
@@ -920,8 +928,7 @@ if (animationUrl.type === "share") {
           onPlay={() => handleTrack(
             data?.type || "interactive",
             data?.title || ""
-          )
-        }>
+          )}>
           <source
           src={videoData.videoUrl}
           type="video/mp4"
@@ -942,28 +949,52 @@ if (animationUrl.type === "share") {
       if (animationUrl.type === "looped" || animationUrl.type === "generateLoop") {
         console.log("Loop Url Recived", animationUrl.url);
         return (
-          <div className="panel" style={{ textAlign: "center" }}>
+        <div className="panel">
           <HeaderBar showActions={false} />
-        {GlobalEmailModal}
-        <h3>Looped Animation</h3>
-        <a href={animationUrl.url}>
-          {animationUrl.url}
-        </a>
-        <object
-        data={animationUrl.url}
-        type="text/html"
-        width="100%"
-        height="700"
-        style={{
-          border: "none",
-          borderRadius: "10px"
-          }}
-          >
-            <p>Loop animation could not be loaded.</p>
-            </object>
-            </div>
-            );
-          }
+          {GlobalEmailModal}
+          <div className="loop-card">
+            <h2 className="loop-heading">
+              Loop Animation Generated
+              </h2>
+              <div className="loop-link-box">
+                {animationUrl.url}
+                </div>
+                <div className="loop-buttons">
+                  <button
+                  className="copy-btn"
+                  onClick={() =>
+                    navigator.clipboard.writeText(animationUrl.url)
+                    }>
+                      Copy Link
+                      </button>
+                    <button
+                    className="open-btn"
+                    onClick={() =>
+                    window.open(animationUrl.url, "_blank")
+                    }>
+                      Open Link
+                      </button>
+                    </div>
+                  </div>
+                  <div className="loop-preview-card">
+                    <h3 className="preview-title">
+                      Animation Preview
+                      </h3>
+                      <object
+                      data={animationUrl.url}
+                      type="text/html"
+                      width="100%"
+                      height="700"
+                      style={{
+                        border: "none"
+                        }
+                      }>
+                        <p>Loop animation could not be loaded.</p>
+                        </object>
+                      </div>
+                    </div>
+                    );
+                  }
           if (animationUrl.type === "dual") {
             return (
                <div>
@@ -980,7 +1011,6 @@ if (animationUrl.type === "share") {
             onLoad={() => handleTrack("interactive", "Clutch(Interactive Animation", animationUrl.interactive)}
             />
           </div>
-          
           <div className="viewer-box">
             <h4>Narrated</h4>
             <iframe
@@ -1040,8 +1070,7 @@ if (animationUrl.type === "share") {
               style={{
                 marginBottom: "15px",
                 padding: "15px"
-              }}
-            >
+              }}>
               <p>
                 <strong>Animation:</strong>{" "}
                 {item.animation_name}
@@ -1086,9 +1115,9 @@ if (animationUrl.type === "share") {
           onClick={() =>
             navigator.clipboard.writeText(
               response.api_key || ""
-            )
-          }
-        >Copy API Key
+            )}
+        >
+          Copy API Key
         </button>
       </div>
     </div>
@@ -1114,9 +1143,7 @@ if (animationUrl.type === "share") {
               data.mode,
               data.title,
               data.url
-            )
-          }
-        />
+            )}/>
       </div>
       <div className="card">
         <p>
