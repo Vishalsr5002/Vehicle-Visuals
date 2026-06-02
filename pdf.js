@@ -3,7 +3,6 @@ import puppeteer from "puppeteer";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-
 const router = express.Router();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -19,7 +18,11 @@ router.post("/generate-pdf", async (req, res) => {
       image2 = ""
     } = req.body || {};
     const templatePath = path.join(__dirname, "../template.html");
-    console.log("Path:", templatePath);
+    if (!fs.existsSync(templatePath)) {
+      return res.status(500).json({
+        error: "Template file not found"
+      });
+    }
     let html = fs.readFileSync(templatePath, "utf8");
     html = html
       .replace(/{{title}}/g, title)
@@ -27,7 +30,6 @@ router.post("/generate-pdf", async (req, res) => {
       .replace(/{{rightText}}/g, rightText)
       .replace(/{{image1}}/g, image1)
       .replace(/{{image2}}/g, image2);
-
     const browser = await puppeteer.launch({
       headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox"]
@@ -35,18 +37,16 @@ router.post("/generate-pdf", async (req, res) => {
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: "networkidle0" });
     await page.evaluate(async () => {
-      const imgs = Array.from(document.images);
+      const images = Array.from(document.images);
       await Promise.all(
-        imgs.map(img => {
+        images.map(img => {
           if (img.complete) return;
           return new Promise(resolve => {
             img.onload = resolve;
             img.onerror = resolve;
           });
-        })
-      );
-    }
-  );
+        }));
+    });
     const pdf = await page.pdf({
       format: "A4",
       printBackground: true
