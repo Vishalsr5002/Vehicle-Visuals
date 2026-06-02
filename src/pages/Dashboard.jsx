@@ -81,9 +81,12 @@ const buildAnimationUrl = (partId, animationType) => {
     `&mute=1`
   );
 };
+const searchCards = selectedOption === "search"
+    ? animationUrl?.data || []
+    : [];
   return (
     <div className="dashboard">
-      <h2>Animation Catalog</h2>
+      <h2>Animations</h2>
       {/* {
       selectedOption === "search" &&
       animationUrl?.type === "search" && (
@@ -123,63 +126,102 @@ const buildAnimationUrl = (partId, animationType) => {
         </div>
       )
     }
-      {(selectedOption === "catalog" ||
-      selectedOption === "search") && (
+      {selectedOption === "search" ? (
       <div className="animation-grid">
-      {[
-    {
-      title: "Clutch 1",
-      badge: "Interactive",
-      icon: <Folder size={48} />,
-      params: {
-        login: "motovisuals",
-        password: "motovisuals",
-        apiKey: "tg2zw99gwqb5",
-        moduleName: "animation",
-        methodName: "displayAnimation",
-        lang: "en_US",
-        animationType: "1",
-        brand: "VV",
-        partId: "7011"
+        {animationUrl?.data?.length > 0 ? (
+          animationUrl.data.map((item, index) => {
+          const partId = item.part_id || item._partId || item.animation_id;
+          return (
+          <div
+            key={index}
+            className="animation-card"
+            onClick={() => {
+              const isInteractive = String(item.is_interactive ?? item.interactive)
+              .trim() === "1";
+              const animationType = isInteractive ? "1" : "0";
+              const Cluttch = "The clutch master cylinder is a vital hydraulic component in manual transmission vehicles that acts as a translator between the driver’s foot and the clutch mechanism. When you press the clutch pedal, a pushrod connected to the pedal forces a piston inside the master cylinder to move. This mechanical movement compresses hydraulic fluid typically brake fluid within a sealed chamber, generating high hydraulic pressure. This pressurized fluid then travels through a hydraulic line to the clutch slave cylinder, which in turn actuates the clutch fork and release bearing to disengage the engine from the transmission.";
+              console.log("SEARCH CARD DATA:", item);
+              console.log("DESCRIPTION:", item.description);
+              console.log("PDF DESCRIPTION:", item.pdfDescription);
+              const animationUrlBuilt = buildAnimationUrl(partId, animationType);
+              setAnimationUrl((prev) => ({
+                ...prev,
+                type: "single",
+                selectedAnimation: {
+                  title: item.customTitle || (isInteractive ? "Clutch 1" : "Clutch 2"),
+                  url: animationUrlBuilt,
+                  type: isInteractive ? "interactive" : "narrated",
+                  partId,
+                  animationType,
+                  description: Cluttch
+                },
+                previousResults: animationUrl?.previousResults || animationUrl?.data || []
+              }));
+            }}>
+            <div className="card-icon">
+              <Folder size={48} />
+            </div>
+            <h4>{item.is_interactive === "1"
+                 ? "Clutch 1"
+                 : "Clutch 2"
+                }
+            </h4>
+            <span className="badge">
+              {item.customBadge || item.interaction_label || "Animation"}
+            </span>
+          </div>
+        );
+      })
+    ) : formData?.term &&
+    formData.term.trim().length > 2 &&
+    animationUrl?.loading === false ? (
+    <p>No Animations Found</p>
+    ) : null}
+    </div>
+    ) : selectedOption === "catalog" ? (
+      <div className="animation-grid">
+    {[
+      {
+        title: "Clutch 1",
+        badge: "Interactive",
+        icon: <Folder size={48} />,
+        params: {
+          login: "motovisuals",
+          password: "motovisuals",
+          apiKey: "tg2zw99gwqb5",
+          moduleName: "animation",
+          methodName: "displayAnimation",
+          lang: "en_US",
+          animationType: "1",
+          brand: "VV",
+          partId: "7011"
+        },
+        data: {
+          title: "Clutch (Interactive Animation)",
+          description: "The clutch master cylinder is a vital hydraulic component in manual transmission vehicles that acts as a translator between the driver’s foot and the clutch mechanism. When you press the clutch pedal, a pushrod connected to the pedal forces a piston inside the master cylinder to move. This mechanical movement compresses hydraulic fluid typically brake fluid within a sealed chamber, generating high hydraulic pressure. This pressurized fluid then travels through a hydraulic line to the clutch slave cylinder, which in turn actuates the clutch fork and release bearing to disengage the engine from the transmission."
+        }
       },
-      data: {
-        title: "Clutch (Interactive Animation)",
-        //url: "https://dev.motovisuals.com/thirdpartyapi/#!/viewAnimation/7011?show_menu=0&is_interactive=1&show_left_sidebar=0&show_description=0&video_only=0&auto_play=1&mute=1",
-        description: "The clutch master cylinder is a vital hydraulic component in manual transmission vehicles that acts as a translator between the driver’s foot and the clutch mechanism. When you press the clutch pedal, a pushrod connected to the pedal forces a piston inside the master cylinder to move. This mechanical movement compresses hydraulic fluid typically brake fluid within a sealed chamber, generating high hydraulic pressure. This pressurized fluid then travels through a hydraulic line to the clutch slave cylinder, which in turn actuates the clutch fork and release bearing to disengage the engine from the transmission."
+      {
+        title: "Clutch 2",
+        badge: "Narrated",
+        icon: <Layers size={48} />,
+        params: {
+          login: "motovisuals",
+          password: "motovisuals",
+          apiKey: "tg2zw99gwqb5",
+          moduleName: "animation",
+          methodName: "displayAnimation",
+          lang: "en_US",
+          animationType: "0",
+          brand: "VV",
+          partId: "7011"
+        },
+        data: {
+          title: "Clutch (Narrated Animation)",
+          description: "The clutch master cylinder is a vital hydraulic component in manual transmission vehicles that acts as a translator between the driver’s foot and the clutch mechanism. When you press the clutch pedal, a pushrod connected to the pedal forces a piston inside the master cylinder to move. This mechanical movement compresses hydraulic fluid typically brake fluid within a sealed chamber, generating high hydraulic pressure. This pressurized fluid then travels through a hydraulic line to the clutch slave cylinder, which in turn actuates the clutch fork and release bearing to disengage the engine from the transmission."
+        }
       }
-    },
-    
-    {
-      title: "Clutch 2",
-      badge: "Narrated",
-      icon: <Layers size={48} />,
-      params: {
-        login: "motovisuals",
-        password: "motovisuals",
-        apiKey: "tg2zw99gwqb5",
-        moduleName: "animation",
-        methodName: "displayAnimation",
-        lang: "en_US",
-        animationType: "0",
-        brand: "VV",
-        partId: "7011"
-      },
-      data: {
-        title: "Clutch (Narrated Animation)",
-        //url: "https://motovisuals.com/thirdpartyapi/#!/viewAnimation/7011?show_menu=0&is_interactive=0&show_left_sidebar=0&show_description=0&video_only=0&auto_play=1&mute=1",
-        description: "The clutch master cylinder is a vital hydraulic component in manual transmission vehicles that acts as a translator between the driver’s foot and the clutch mechanism. When you press the clutch pedal, a pushrod connected to the pedal forces a piston inside the master cylinder to move. This mechanical movement compresses hydraulic fluid typically brake fluid within a sealed chamber, generating high hydraulic pressure. This pressurized fluid then travels through a hydraulic line to the clutch slave cylinder, which in turn actuates the clutch fork and release bearing to disengage the engine from the transmission."
-      }
-    }
-  ]
-    .filter((card) => {
-      const searchTerm = formData?.term?.toLowerCase() || "";
-      if (selectedOption !== "search") return true;
-      return card.title
-        .toLowerCase()
-        .includes(searchTerm);
-    }
-  )
-    .map((card, index) => (
+    ].map((card, index) => (
       <div
         key={index}
         className="animation-card"
@@ -195,39 +237,42 @@ const buildAnimationUrl = (partId, animationType) => {
             animationType: card.params.animationType,
             brand: card.params.brand,
             partId: card.params.partId
-          }
-        )
-      );
-      const animationUrl = buildAnimationUrl(
-        card.params.partId,
-        card.params.animationType
-      );
-      const mode = card.params.animationType === "1"
-      ? "interactive"
-      : "narrated";
-      setAnimationUrl({
-        type: "single",
-        data: {
-        ...card.data,
-        url: animationUrl,
-        type: mode,
-        partId: card.params.partId
-      }
-    });
-  }}
-      >
+          })
+        );
+          const animationUrl = buildAnimationUrl(
+            card.params.partId,
+            card.params.animationType
+          );
+          const mode = card.params.animationType === "1"
+              ? "interactive"
+              : "narrated";
+              console.log("CLICKED SEARCH ITEM:", item);
+              console.log("ITEM DESCRIPTION:", item.description);
+              console.log("ITEM PDF DESCRIPTION:", item.pdfDescription);
+          setAnimationUrl((prev) => ({
+            ...prev,
+            type: "single",
+            selectedAnimation: {
+              ...card.data,
+              url: animationUrl,
+              type: mode,
+              partId: card.params.partId,
+              description: item.description,
+              pdfDescription: item.pdfDescription
+            }
+          }));
+        }}>
         <div className="card-icon">
           {card.icon}
         </div>
-        
         <h4>{card.title}</h4>
         <span className="badge">
           {card.badge}
         </span>
       </div>
     ))}
-    </div>
-  )}
+  </div>
+) : null}
   </div>
   );
 }
