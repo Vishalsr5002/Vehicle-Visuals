@@ -1,4 +1,4 @@
-const BASE_API_URL = "https://dev.motovisuals.com/api/animation_link/api/api.php";
+const BASE_API_URL = "https://motovisuals.com/api/animation_link/api/api.php";
 const API_KEY = "tg2zw99gwqb5";
 
 const normalizeSearchData = (data) => {
@@ -389,7 +389,7 @@ export const getAnimationLinkUsage = async (jobId) => {
 };
 export const getAnimationUrls = (partId) => {
   if (!partId) return null;
-  const base = `https://dev.motovisuals.com/thirdpartyapi/#!/viewAnimation/${partId}`;
+  const base = `https://motovisuals.com/thirdpartyapi/#!/viewAnimation/${partId}`;
   return {
     type: "dual",
     interactive:
@@ -414,7 +414,7 @@ export const generateViewerLinks = (partId) => {
   if (!partId) return null;
   return {
     type: "dual",
-    interactive: `https://dev.motovisuals.com/thirdpartyapi/#!/viewAnimation/${partId}?show_menu=0&is_interactive=1&show_left_sidebar=0&show_description=0&video_only=0&auto_play=0`,
+    interactive: `https://motovisuals.com/thirdpartyapi/#!/viewAnimation/${partId}?show_menu=0&is_interactive=1&show_left_sidebar=0&show_description=0&video_only=0&auto_play=0`,
     narrated: `https://motovisuals.com/thirdpartyapi/#!/viewAnimation/${partId}?show_menu=0&is_interactive=0&show_left_sidebar=0&show_description=0&video_only=0&auto_play=0`
   };
 };
