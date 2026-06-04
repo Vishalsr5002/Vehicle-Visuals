@@ -9,8 +9,11 @@ import {
   SquarePlus,
   View
 } from "lucide-react";
-export const Sidebar = ({ onSelectOption }) => {
+import { useNavigate } from "react-router-dom";
+import { getSlug } from "../utils/slugMap.js";
+export const Sidebar = () => {
   const [openMenu, setOpenMenu] = useState(null);
+  const navigate = useNavigate();
   const toggleMenu = (menu) => {
     setOpenMenu(openMenu === menu ? null : menu);
   };
@@ -29,38 +32,65 @@ export const Sidebar = ({ onSelectOption }) => {
       </div>
       {openMenu === "animations" && (
         <ul className="submenu">
-          <li onClick={() => onSelectOption("catalog")}>
+          <li onClick={() => 
+            navigate(
+              `/animations/${getSlug("catalog")}`
+              )}>
             Animation Catalog
           </li>
           <li
             style={{ cursor: "pointer" }}
-            onClick={() => onSelectOption("display")}>
+            onClick={() => 
+              navigate(
+                `/animations/${getSlug("display")}`
+              )}>
             Displaying Animations
           </li>
-          <li onClick={() => onSelectOption("links")}>
+          <li onClick={() => 
+            navigate(
+              `/animations/${getSlug("links")}`
+            )}>
             Generating Links for sending
           </li>
-          <li onClick={() => onSelectOption("videoDetails")}>
+          <li onClick={() =>
+            navigate(
+              `/animations/${getSlug("videoDetails")}`
+            )}>
             Get Video Details
           </li>
-          <li onClick={() => onSelectOption("search")}>
+          <li onClick={() => 
+            navigate(
+              `/animations/${getSlug("search")}`
+            )}>
             Search Animations
           </li>
-          <li onClick={() => onSelectOption("share")}>
+          <li onClick={() => 
+            navigate(
+              `/animations/${getSlug("share")}`
+            )}>
             Get Animation Share Link
           </li>
-          <li onClick={() => onSelectOption("update")}>
+          <li onClick={() => 
+            navigate(
+              `/animations/${getSlug("update")}`
+            )}>
             Update Animation Link
           </li>
-          <li onClick={() => onSelectOption("usage")}>
+          <li onClick={() => 
+            navigate(
+              `/animations/${getSlug("usage")}`
+            )}>
             Animation Link Usage
           </li>
-          <li onClick={() => onSelectOption("viewed")}>
+          <li onClick={() => 
+            navigate(
+              `/animations/${getSlug("viewed")}`
+            )}>
             Animations Viewed Report
           </li>
         </ul>
       )}
-  
+      
       <h5>LOOPED ANIMATIONS</h5>
       <div className="menu-item" onClick={() => toggleMenu("looped")}>
         <RefreshCw size={18} />
@@ -73,10 +103,16 @@ export const Sidebar = ({ onSelectOption }) => {
       </div>
       {openMenu === "looped" && (
         <ul className="submenu">
-          <li onClick={() => onSelectOption("generateLoop")}>
+          <li onClick={() => 
+            navigate(
+              `/looped/${getSlug("generateLoop")}`
+            )}>
             Generate Looped Animations API Link
           </li>
-          <li onClick={() => onSelectOption("autoLogin")}>
+          <li onClick={() => 
+            navigate(
+              `/looped/${getSlug("autoLogin")}`
+            )}>
             Auto Login to Looped Animation Link
           </li>
         </ul>
@@ -93,7 +129,9 @@ export const Sidebar = ({ onSelectOption }) => {
       </div>
       {openMenu === "email" && (
         <ul className="submenu">
-          <li onClick={() => onSelectOption("emailAnimation")}>
+          <li onClick={() => navigate(
+            `/email/${getSlug("emailAnimation")}`
+          )}>
             Auto Login to Email Animation Link
           </li>
         </ul>
@@ -110,30 +148,46 @@ export const Sidebar = ({ onSelectOption }) => {
       </div>
       {openMenu === "additionalAPI" && (
         <ul className="submenu">
-          <li onClick={() => onSelectOption("auto")}>
+          <li onClick={() => navigate(
+            `/additionalAPI/${getSlug("auto")}`
+          )}>
             Auto-Login
           </li>
           <li
             style={{ cursor: "pointer" }}
-            onClick={() => onSelectOption("lookup")}>
+            onClick={() => navigate(
+              `/additionalAPI/${getSlug("lookup")}`
+            )}>
             Website Lookup by API Key
           </li>
-          <li onClick={() => onSelectOption("prompt")}>
+          <li onClick={() => navigate(
+            `/additionalAPI/${getSlug("prompt")}`
+          )}>
             User Upgrade Prompt
           </li>
-          <li onClick={() => onSelectOption("lite")}>
+          <li onClick={() => navigate(
+            `/additionalAPI/${getSlug("lite")}`
+          )}>
             Upgrade Lite User
           </li>
-          <li onClick={() => onSelectOption("pdf")}>
+          <li onClick={() => navigate(
+            `/additionalAPI/${getSlug("pdf")}`
+          )}>
             Animation PDF
           </li>
-          <li onClick={() => onSelectOption("get")}>
+          <li onClick={() => navigate(
+            `/additionalAPI/${getSlug("get")}`
+          )}>
             Get API Key
           </li>
-          <li onClick={() => onSelectOption("preference")}>
+          <li onClick={() => navigate(
+            `/additionalAPI/${getSlug("preference")}`
+          )}>
             Get User Preference
           </li>
-          <li onClick={() => onSelectOption("details")}>
+          <li onClick={() => navigate(
+            `/additionalAPI/${getSlug("details")}`
+          )}>
             Get User Details
           </li>
         </ul>
@@ -150,7 +204,9 @@ export const Sidebar = ({ onSelectOption }) => {
       </div>
       {openMenu === "viewing" && (
         <ul className="submenu">
-          <li onClick={() => onSelectOption("viewing")}>
+          <li onClick={() => navigate(
+            `/viewing/${getSlug("viewing")}`
+          )}>
             Viewing Animations Page
           </li>
         </ul>
