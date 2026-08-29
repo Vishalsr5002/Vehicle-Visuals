@@ -11,6 +11,7 @@ export const apiParameters = {
     { label: "Brand", name: "brand" }
   ],
 
+
   display: [
     { label: "Login ID", name: "login", required: true },
     { label: "Password", name: "password", required: true },
